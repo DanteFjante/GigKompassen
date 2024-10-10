@@ -14,10 +14,12 @@ namespace GigKompassen.Web.Areas.Identity.Pages.Account
   public class ConfirmEmailModel : PageModel
   {
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly SignInManager<ApplicationUser> _signInManager;
 
-    public ConfirmEmailModel(UserManager<ApplicationUser> userManager)
+    public ConfirmEmailModel(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
     {
       _userManager = userManager;
+      _signInManager = signInManager;
     }
 
     /// <summary>
@@ -40,15 +42,12 @@ namespace GigKompassen.Web.Areas.Identity.Pages.Account
       }
 
       code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
-      var result = await _userManager.ConfirmEmailAsync(user, code);
-      StatusMessage = result.Succeeded ? "Thank you for confirming your email." : "Error confirming your email.";
-      return Page();
-    }
 
-    /// <summary>
-    /// Confirm email first after form is filled in and valid. There is still user data that needs to be added 
-    ///
-    /// </summary>
+
+      var result = await _userManager.ConfirmEmailAsync(user, code);
+      await _signInManager.SignInAsync(user, isPersistent: false);
+      return RedirectToPage("CompleteProfile");
+    }
 
   }
 }

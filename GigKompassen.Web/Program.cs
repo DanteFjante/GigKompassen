@@ -1,5 +1,6 @@
 using EventKalendern.Core.Services;
 
+using GigKompassen.Enums;
 using GigKompassen.Models.Accounts;
 using GigKompassen.Settings;
 using GigKompassen.Web.Data;
@@ -12,7 +13,7 @@ namespace GigKompassen.Web
 {
   public class Program
   {
-    public static void Main(string[] args)
+    public static async void Main(string[] args)
     {
       var builder = WebApplication.CreateBuilder(args);
 
@@ -38,6 +39,8 @@ namespace GigKompassen.Web
 
       var app = builder.Build();
 
+      await CreateRoles(app.Services);
+      
       // Configure the HTTP request pipeline.
       if (app.Environment.IsDevelopment())
       {
@@ -76,6 +79,19 @@ namespace GigKompassen.Web
     public static void ConfigureServices(IServiceCollection services)
     {
       services.AddTransient<IEmailSender, GmailService>();
+    }
+
+    public static async Task CreateRoles(IServiceProvider serviceProvider)
+    {
+      var roleManager = serviceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
+
+      foreach (var roleName in Enum.GetNames(typeof(ApplicationRoleTypes)))
+      {
+        if (!await roleManager.RoleExistsAsync(roleName))
+        {
+          await roleManager.CreateAsync(new ApplicationRole(roleName));
+        }
+      }
     }
   }
 }

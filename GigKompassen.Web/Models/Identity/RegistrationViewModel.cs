@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using GigKompassen.Enums;
+
+using System.ComponentModel.DataAnnotations;
 
 namespace GigKompassen.Web.Models.Identity
 {
@@ -7,7 +9,7 @@ namespace GigKompassen.Web.Models.Identity
 
     [Required]
     [Display(Name = "Account Type")]
-    public ApplicationRoleTypes Role { get; set; }
+    public RegisterRoleTypes Role { get; set; }
 
     [Required]
     [DataType(DataType.Text)]
@@ -30,14 +32,33 @@ namespace GigKompassen.Web.Models.Identity
     [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
     public string ConfirmPassword { get; set; }
   }
+  public static class RoleConverter
+  {
+    public static ApplicationRoleTypes ConvertToApplicationRoleType(this RegisterRoleTypes registerRoleType)
+    {
+      switch (registerRoleType)
+      {
+        case RegisterRoleTypes.Artist:
+          return ApplicationRoleTypes.Artist;
+        case RegisterRoleTypes.SceneOwner:
+          return ApplicationRoleTypes.SceneOwner;
+        case RegisterRoleTypes.Manager:
+          return ApplicationRoleTypes.Manager;
+        default:
+          throw new ArgumentException("Invalid RegisterRoleType value.");
+      }
+    }
+  }
 
-  public enum ApplicationRoleTypes
+  public enum RegisterRoleTypes
   {
     [Display(Name = "Artist")]
     Artist,
-    [Display(Name = "Scene")]
-    Scene,
+    [Display(Name = "Scene Owner")]
+    SceneOwner,
     [Display(Name = "Manager")]
     Manager
   }
+
+
 }

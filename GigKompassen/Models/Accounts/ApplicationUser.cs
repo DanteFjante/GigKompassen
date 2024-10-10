@@ -17,9 +17,7 @@ namespace GigKompassen.Models.Accounts
     public DateTime Created { get; set; } = DateTime.UtcNow;
     public DateTime LastLoggedIn { get; set; }
 
-    [Required]
-    public ApplicationRoleTypes ApplicationRole { get; set; }
-
+    public bool ProfileCompleted { get; set; } = false;
 
     // Navigation property for chat participants
     public ICollection<ChatParticipant> ChatParticipants { get; set; }

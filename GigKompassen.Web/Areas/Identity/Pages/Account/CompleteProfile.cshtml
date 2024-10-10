@@ -1,0 +1,60 @@
+﻿@page
+@model CompleteProfileModel
+@{
+  ViewData["Title"] = "Complete Registration";
+}
+
+<link rel="stylesheet" href="~/css/Register.css" />
+
+<div class="complete-profile-container">
+  <div class="complete-profile-form">
+    <h1>@ViewData["Title"]</h1>
+    <form method="post">
+      <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+      <div class="form-floating mb-3">
+        <input asp-for="Input.FirstName" class="form-control" placeholder="First Name" />
+        <label asp-for="Input.FirstName">First Name</label>
+        <span asp-validation-for="Input.FirstName" class="text-danger"></span>
+      </div>
+
+      <div class="form-floating mb-3">
+        <input asp-for="Input.LastName" class="form-control" placeholder="Last Name" />
+        <label asp-for="Input.LastName">Last Name</label>
+        <span asp-validation-for="Input.LastName" class="text-danger"></span>
+      </div>
+
+      @* Add additional fields based on the user's role *@
+      @if (Model.AccountType == "Artist")
+      {
+        <div class="form-floating mb-3">
+          <input asp-for="Input.ArtistGroupName" class="form-control" placeholder="Artist Group Name" />
+          <label asp-for="Input.ArtistGroupName">Artist Group Name</label>
+          <span asp-validation-for="Input.ArtistGroupName" class="text-danger"></span>
+        </div>
+      }
+      else if (Model.AccountType == "Scene")
+      {
+        <div class="form-floating mb-3">
+          <input asp-for="Input.SceneName" class="form-control" placeholder="Scene Name" />
+          <label asp-for="Input.SceneName">Scene Name</label>
+          <span asp-validation-for="Input.SceneName" class="text-danger"></span>
+        </div>
+      }
+      else if (Model.AccountType == "Manager")
+      {
+        <div class="form-floating mb-3">
+          <input asp-for="Input.CompanyName" class="form-control" placeholder="Company Name" />
+          <label asp-for="Input.CompanyName">Company Name</label>
+          <span asp-validation-for="Input.CompanyName" class="text-danger"></span>
+        </div>
+      }
+
+      <button type="submit" class="w-100 btn btn-lg btn-primary">Complete Registration</button>
+    </form>
+  </div>
+</div>
+
+@section Scripts {
+  <partial name="_ValidationScriptsPartial" />
+}

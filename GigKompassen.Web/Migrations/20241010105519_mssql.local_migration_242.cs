@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace KulturKanalen.Web.Migrations
+namespace GigKompassen.Web.Migrations
 {
     /// <inheritdoc />
     public partial class mssqllocal_migration_242 : Migration
