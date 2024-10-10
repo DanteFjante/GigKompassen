@@ -1,9 +1,9 @@
-﻿using KulturKanalen.Enums;
-using KulturKanalen.Models.Accounts;
+﻿using GigKompassen.Enums;
+using GigKompassen.Models.Accounts;
 
 using System.ComponentModel.DataAnnotations;
 
-namespace KulturKanalen.Models.Media
+namespace GigKompassen.Models.Media
 {
 
   public class MediaItem

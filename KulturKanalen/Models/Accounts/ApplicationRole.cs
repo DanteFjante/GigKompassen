@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 
-namespace KulturKanalen.Models.Accounts
+namespace GigKompassen.Models.Accounts
 {
   public class ApplicationRole : IdentityRole<Guid>
   {

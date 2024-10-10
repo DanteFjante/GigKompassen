@@ -1,9 +1,9 @@
-﻿using KulturKanalen.Enums;
-using KulturKanalen.Models.Media;
+﻿using GigKompassen.Enums;
+using GigKompassen.Models.Media;
 
 using System.ComponentModel.DataAnnotations;
 
-namespace KulturKanalen.Models.Artists
+namespace GigKompassen.Models.Artists
 {
   public class ArtistProfile
   {

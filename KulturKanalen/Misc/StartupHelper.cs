@@ -1,5 +1,5 @@
-﻿using KulturKanalen.Enums;
-using KulturKanalen.Models.Accounts;
+﻿using GigKompassen.Enums;
+using GigKompassen.Models.Accounts;
 
 using Microsoft.AspNetCore.Identity;
 
@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KulturKanalen.Misc
+namespace GigKompassen.Misc
 {
   public static class StartupHelper
   {

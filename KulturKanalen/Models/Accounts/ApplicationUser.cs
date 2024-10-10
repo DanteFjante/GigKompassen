@@ -1,12 +1,12 @@
-﻿using KulturKanalen.Enums;
-using KulturKanalen.Models.Chat;
+﻿using GigKompassen.Enums;
+using GigKompassen.Models.Chat;
 
 using Microsoft.AspNetCore.Identity;
 
 using System.ComponentModel.DataAnnotations;
 
 
-namespace KulturKanalen.Models.Accounts
+namespace GigKompassen.Models.Accounts
 {
   public class ApplicationUser : IdentityUser<Guid>
   {

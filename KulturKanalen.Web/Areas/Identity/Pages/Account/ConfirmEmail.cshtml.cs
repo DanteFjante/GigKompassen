@@ -3,13 +3,13 @@
 #nullable disable
 
 using System.Text;
-using KulturKanalen.Models.Accounts;
+using GigKompassen.Models.Accounts;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 
-namespace KulturKanalen.Web.Areas.Identity.Pages.Account
+namespace GigKompassen.Web.Areas.Identity.Pages.Account
 {
   public class ConfirmEmailModel : PageModel
   {

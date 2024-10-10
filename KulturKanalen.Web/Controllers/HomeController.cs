@@ -1,10 +1,10 @@
-using KulturKanalen.Web.Models;
+using GigKompassen.Web.Models;
 
 using Microsoft.AspNetCore.Mvc;
 
 using System.Diagnostics;
 
-namespace KulturKanalen.Web.Controllers
+namespace GigKompassen.Web.Controllers
 {
   public class HomeController : Controller
   {

@@ -1,9 +1,9 @@
-﻿using KulturKanalen.Models.Accounts;
+﻿using GigKompassen.Models.Accounts;
 
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace KulturKanalen.Models.Chat
+namespace GigKompassen.Models.Chat
 {
   public class ChatParticipant
   {

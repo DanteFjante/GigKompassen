@@ -1,4 +1,4 @@
-﻿namespace KulturKanalen.Settings
+﻿namespace GigKompassen.Settings
 {
   public class EmailSettings
   {

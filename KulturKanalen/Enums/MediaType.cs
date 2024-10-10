@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KulturKanalen.Enums
+namespace GigKompassen.Enums
 {
   public enum MediaType
   {

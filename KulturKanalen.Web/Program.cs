@@ -1,14 +1,14 @@
 using EventKalendern.Core.Services;
 
-using KulturKanalen.Models.Accounts;
-using KulturKanalen.Settings;
-using KulturKanalen.Web.Data;
+using GigKompassen.Models.Accounts;
+using GigKompassen.Settings;
+using GigKompassen.Web.Data;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 
-namespace KulturKanalen.Web
+namespace GigKompassen.Web
 {
   public class Program
   {

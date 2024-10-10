@@ -1,4 +1,4 @@
-﻿namespace KulturKanalen.Enums
+﻿namespace GigKompassen.Enums
 {
   public enum ChatMessageType
   {

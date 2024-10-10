@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace KulturKanalen.Models.Chat
+namespace GigKompassen.Models.Chat
 {
   public class ChatMessage
   {

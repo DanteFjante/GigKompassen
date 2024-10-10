@@ -1,4 +1,4 @@
-﻿using KulturKanalen.Models.Artists;
+﻿using GigKompassen.Models.Artists;
 
 using System;
 using System.Collections.Generic;
@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KulturKanalen.Models
+namespace GigKompassen.Models
 {
   public class Genre
   {

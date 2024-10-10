@@ -1,4 +1,4 @@
-﻿using KulturKanalen.Models.Accounts;
+﻿using GigKompassen.Models.Accounts;
 
 using Microsoft.AspNetCore.Identity;
 
@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KulturKanalen.Stores
+namespace GigKompassen.Stores
 {
   public class RoleStore : IRoleStore<ApplicationUser>
   {

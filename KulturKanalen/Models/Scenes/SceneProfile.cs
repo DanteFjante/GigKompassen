@@ -1,8 +1,8 @@
-﻿using KulturKanalen.Models.Media;
+﻿using GigKompassen.Models.Media;
 
 using System.ComponentModel.DataAnnotations;
 
-namespace KulturKanalen.Models.Scenes
+namespace GigKompassen.Models.Scenes
 {
   public class SceneProfile
   {

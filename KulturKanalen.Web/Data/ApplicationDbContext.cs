@@ -1,15 +1,15 @@
-﻿using KulturKanalen.Models;
-using KulturKanalen.Models.Accounts;
-using KulturKanalen.Models.Artists;
-using KulturKanalen.Models.Chat;
-using KulturKanalen.Models.Media;
-using KulturKanalen.Models.Scenes;
+﻿using GigKompassen.Models;
+using GigKompassen.Models.Accounts;
+using GigKompassen.Models.Artists;
+using GigKompassen.Models.Chat;
+using GigKompassen.Models.Media;
+using GigKompassen.Models.Scenes;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace KulturKanalen.Web.Data
+namespace GigKompassen.Web.Data
 {
   public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
   {

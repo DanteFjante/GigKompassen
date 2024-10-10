@@ -1,10 +1,10 @@
-﻿using KulturKanalen.Enums;
-using KulturKanalen.Models.Accounts;
-using KulturKanalen.Models.Media;
+﻿using GigKompassen.Enums;
+using GigKompassen.Models.Accounts;
+using GigKompassen.Models.Media;
 
 using System.ComponentModel.DataAnnotations;
 
-namespace KulturKanalen.Models.Chat
+namespace GigKompassen.Models.Chat
 {
   public class ChatMessageContent
   {

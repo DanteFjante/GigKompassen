@@ -1,10 +1,10 @@
-﻿using KulturKanalen.Models.Accounts;
-using KulturKanalen.Models.Artists;
-using KulturKanalen.Models.Scenes;
+﻿using GigKompassen.Models.Accounts;
+using GigKompassen.Models.Artists;
+using GigKompassen.Models.Scenes;
 
 using System.ComponentModel.DataAnnotations;
 
-namespace KulturKanalen.Models
+namespace GigKompassen.Models
 {
   public class ManagementProfile
   {

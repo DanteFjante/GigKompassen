@@ -1,7 +1,7 @@
-﻿using KulturKanalen.Models.Media;
+﻿using GigKompassen.Models.Media;
 using System.ComponentModel.DataAnnotations;
 
-namespace KulturKanalen.Models.Chat
+namespace GigKompassen.Models.Chat
 {
   public class Chat
   {

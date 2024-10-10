@@ -1,4 +1,4 @@
-namespace KulturKanalen.Web.Models
+namespace GigKompassen.Web.Models
 {
   public class ErrorViewModel
   {

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KulturKanalen.Models.Artists
+namespace GigKompassen.Models.Artists
 {
   public class GroupMember
   {
