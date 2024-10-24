@@ -1,14 +1,17 @@
-﻿using GigKompassen.Models.Accounts;
-
-using System.ComponentModel.DataAnnotations;
+﻿using GigKompassen.Models.Profiles;
+using GigKompassen.Models.Chats;
 
 namespace GigKompassen.Models.Media
 {
   public class MediaGallery
   {
-    [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; }
 
-    public ICollection<MediaItem> MediaItems { get; set; }
+    //Foreign Keys
+    public Guid OwnerId { get; set; }
+
+    // Navigation property
+    public MediaGalleryOwner? Owner { get; set; }
+    public List<MediaItem> Items { get; set; } = new List<MediaItem>();
   }
 }

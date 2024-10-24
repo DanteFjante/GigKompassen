@@ -1,11 +1,10 @@
-﻿using GigKompassen.Models;
+﻿using GigKompassen.Authorization.Identity;
+using GigKompassen.Enums;
 using GigKompassen.Models.Accounts;
-using GigKompassen.Models.Artists;
-using GigKompassen.Models.Chat;
+using GigKompassen.Models.Chats;
 using GigKompassen.Models.Media;
-using GigKompassen.Models.Scenes;
+using GigKompassen.Models.Profiles;
 
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,205 +12,237 @@ namespace GigKompassen.Data
 {
   public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
   {
-    // DbSets for your entities
-    public DbSet<ManagementProfile> ManagementProfiles { get; set; }
-    public DbSet<ArtistProfile> ArtistProfiles { get; set; }
-    public DbSet<SceneProfile> SceneProfiles { get; set; }
-    public DbSet<GroupMember> GroupMembers { get; set; }
-    public DbSet<Genre> Genres { get; set; }
-    public DbSet<MediaGallery> MediaGalleries { get; set; }
-    public DbSet<MediaItem> MediaItems { get; set; }
+    public DbSet<ProfileAccess> ProfileAccesses { get; set; }
     public DbSet<Chat> Chats { get; set; }
     public DbSet<ChatParticipant> ChatParticipants { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
-    public DbSet<ChatMessageContent> ChatMessageContents { get; set; }
+    public DbSet<MessageContent> MessageContents { get; set; }
+    public DbSet<MessageTextContent> MessageTextContents { get; set; }
+    public DbSet<MessageMediaContent> MessageMediaContents { get; set; }
+    public DbSet<MediaGalleryOwner> MediaGalleryOwners { get; set; }
+    public DbSet<MediaGallery> MediaGalleries { get; set; }
+    public DbSet<MediaItem> MediaItems { get; set; }
+    public DbSet<MediaLink> MediaLinks { get; set; }
+    public DbSet<Profile> Profiles { get; set; }
+    public DbSet<ArtistProfile> ArtistProfiles { get; set; }
+    public DbSet<SceneProfile> SceneProfiles { get; set; }
+    public DbSet<ManagerProfile> ManagerProfiles { get; set; }
+    public DbSet<Genre> Genres { get; set; }
+    public DbSet<ArtistMember> ArtistMembers { get; set; }
 
-    // Constructor
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
     }
 
-    // OnModelCreating method
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
       base.OnModelCreating(modelBuilder);
 
-      // Rename Identity tables if needed
-      modelBuilder.Entity<ApplicationUser>(entity => entity.ToTable("AspNetUsers"));
-      modelBuilder.Entity<ApplicationRole>(entity => entity.ToTable("AspNetRoles"));
-      modelBuilder.Entity<IdentityUserRole<Guid>>(entity => entity.ToTable("AspNetUserRoles"));
-      modelBuilder.Entity<IdentityUserClaim<Guid>>(entity => entity.ToTable("AspNetUserClaims"));
-      modelBuilder.Entity<IdentityUserLogin<Guid>>(entity => entity.ToTable("AspNetUserLogins"));
-      modelBuilder.Entity<IdentityRoleClaim<Guid>>(entity => entity.ToTable("AspNetRoleClaims"));
-      modelBuilder.Entity<IdentityUserToken<Guid>>(entity => entity.ToTable("AspNetUserTokens"));
+      // Configure Profile and Inheritance
+      modelBuilder.Entity<Profile>(entity =>
+      {
+        entity.HasKey(p => p.Id);
+        entity.Property(p => p.Name).IsRequired();
+        entity.Property(p => p.Public).IsRequired();
+        entity.Property(p => p.ProfileType).IsRequired();
 
-      // Configure IDs to be generated on add
-      modelBuilder.Entity<ApplicationUser>()
-          .Property(u => u.Id)
-          .ValueGeneratedOnAdd();
+        entity.HasOne(p => p.Owner)
+              .WithMany(u => u.OwnedProfiles)
+              .HasForeignKey(p => p.OwnerId)
+              .OnDelete(DeleteBehavior.Cascade); // When ApplicationUser is deleted, delete Profile
+      });
 
-      modelBuilder.Entity<ManagementProfile>()
-          .Property(mp => mp.Id)
-          .ValueGeneratedOnAdd();
+      modelBuilder.Entity<ArtistProfile>().HasBaseType<Profile>();
+      modelBuilder.Entity<SceneProfile>().HasBaseType<Profile>();
+      modelBuilder.Entity<ManagerProfile>().HasBaseType<Profile>();
 
-      modelBuilder.Entity<ArtistProfile>()
-          .Property(ap => ap.Id)
-          .ValueGeneratedOnAdd();
+      // Configure Profile inheritance discriminator
+      modelBuilder.Entity<Profile>()
+          .HasDiscriminator<ProfileTypes>("ProfileType")
+          .HasValue<ArtistProfile>(ProfileTypes.Artist)
+          .HasValue<SceneProfile>(ProfileTypes.Scene)
+          .HasValue<ManagerProfile>(ProfileTypes.Manager);
 
-      modelBuilder.Entity<GroupMember>()
-          .Property(gm => gm.Id)
-          .ValueGeneratedOnAdd();
 
-      modelBuilder.Entity<Genre>()
-          .Property(g => g.Id)
-          .ValueGeneratedOnAdd();
+      // Configure ProfileAccess
+      modelBuilder.Entity<ProfileAccess>(entity =>
+      {
+        entity.HasKey(pa => pa.Id);
 
-      modelBuilder.Entity<SceneProfile>()
-          .Property(sp => sp.Id)
-          .ValueGeneratedOnAdd();
+        entity.HasOne(pa => pa.User)
+              .WithMany(u => u.ProfilesAccesses)
+              .HasForeignKey(pa => pa.UserId)
+              .OnDelete(DeleteBehavior.Cascade); // When ApplicationUser is deleted, delete ProfileAccess
 
-      modelBuilder.Entity<MediaGallery>()
-          .Property(mg => mg.Id)
-          .ValueGeneratedOnAdd();
+        entity.HasOne(pa => pa.Profile)
+              .WithMany(p => p.ProfileAccesses)
+              .HasForeignKey(pa => pa.ProfileId)
+              .OnDelete(DeleteBehavior.Cascade); // When Profile is deleted, delete ProfileAccess
+      });
 
-      modelBuilder.Entity<MediaItem>()
-          .Property(mi => mi.Id)
-          .ValueGeneratedOnAdd();
+      // Configure ChatParticipant
+      modelBuilder.Entity<ChatParticipant>(entity =>
+      {
+        entity.HasKey(cp => cp.Id);
 
-      modelBuilder.Entity<Chat>()
-          .Property(c => c.Id)
-          .ValueGeneratedOnAdd();
+        entity.HasOne(cp => cp.User)
+              .WithMany(u => u.ChatParticipations)
+              .HasForeignKey(cp => cp.UserId)
+              .OnDelete(DeleteBehavior.Cascade); // Cascade when ApplicationUser is deleted
 
-      modelBuilder.Entity<ChatParticipant>()
-          .Property(cp => cp.Id)
-          .ValueGeneratedOnAdd();
+        entity.HasOne(cp => cp.Chat)
+              .WithMany(c => c.Participants)
+              .HasForeignKey(cp => cp.ChatId)
+              .OnDelete(DeleteBehavior.Cascade); // When Chat is deleted, delete ChatParticipant
 
-      modelBuilder.Entity<ChatMessage>()
-          .Property(cm => cm.Id)
-          .ValueGeneratedOnAdd();
+        entity.HasOne(cp => cp.LastRead)
+              .WithOne()
+              .HasForeignKey<ChatParticipant>(cp => cp.LastReadId)
+              .OnDelete(DeleteBehavior.SetNull); // Ignore deletion of LastRead
 
-      modelBuilder.Entity<ChatMessageContent>()
-          .Property(cmc => cmc.Id)
-          .ValueGeneratedOnAdd();
+        // Messages relationship is configured in ChatMessage
+      });
 
-      // Configure many-to-many relationship between ArtistProfile and Genre without explicit join entity
-      modelBuilder.Entity<ArtistProfile>()
-          .HasMany(ap => ap.Genres)
-          .WithMany()
-          .UsingEntity<Dictionary<string, object>>(
-              "ArtistProfileGenre",
-              j => j.HasOne<Genre>().WithMany().HasForeignKey("GenreId"),
-              j => j.HasOne<ArtistProfile>().WithMany().HasForeignKey("ArtistProfileId"),
-              j =>
-              {
-                j.HasKey("ArtistProfileId", "GenreId");
-                j.Property<Guid>("ArtistProfileId");
-                j.Property<Guid>("GenreId");
-              }
-          );
+      // Configure ChatMessage
+      modelBuilder.Entity<ChatMessage>(entity =>
+      {
+        entity.HasKey(cm => cm.Id);
 
-      // Configure ChatParticipant relationships
-      modelBuilder.Entity<ChatParticipant>()
-          .HasOne(cp => cp.Chat)
-          .WithMany(c => c.Participants)
-          .HasForeignKey(cp => cp.ChatId)
-          .OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne(cm => cm.Chat)
+              .WithMany(c => c.Messages)
+              .HasForeignKey(cm => cm.ChatId)
+              .OnDelete(DeleteBehavior.Cascade); // Cascade when Chat is deleted
 
-      modelBuilder.Entity<ChatParticipant>()
-          .HasOne(cp => cp.ApplicationUser)
-          .WithMany(au => au.ChatParticipants)
-          .HasForeignKey(cp => cp.ApplicationUserId)
-          .OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne(cm => cm.Sender)
+              .WithMany(cp => cp.Messages)
+              .HasForeignKey(cm => cm.SenderId)
+              .OnDelete(DeleteBehavior.Restrict); // Ignore deletion of Sender
 
-      // Configure relationship for LastReadMessage
-      modelBuilder.Entity<ChatParticipant>()
-          .HasOne(cp => cp.LastReadMessage)
-          .WithMany()
-          .HasForeignKey(cp => cp.LastReadMessageId)
-          .OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne(cm => cm.Content)
+              .WithOne()
+              .HasForeignKey<ChatMessage>(mc => mc.ContentId)
+              .OnDelete(DeleteBehavior.SetNull); // Cascade when ChatMessage is deleted
 
-      // Enforce uniqueness on ChatId and ApplicationUserId in ChatParticipant
-      modelBuilder.Entity<ChatParticipant>()
-          .HasIndex(cp => new { cp.ChatId, cp.ApplicationUserId })
-          .IsUnique();
+        entity.HasOne(cm => cm.ReplyTo)
+              .WithOne()
+              .HasForeignKey<ChatMessage>(cm => cm.ReplyToId)
+              .OnDelete(DeleteBehavior.SetNull); // Ignore deletion of ReplyTo
+      });
 
-      // Configure ChatMessage relationships
-      modelBuilder.Entity<ChatMessage>()
-          .HasOne(cm => cm.ChatParticipant)
-          .WithMany()
-          .HasForeignKey(cm => cm.ChatParticipantId)
-          .OnDelete(DeleteBehavior.Restrict);
+      // Configure MessageContent and Inheritance
+      modelBuilder.Entity<MessageContent>(entity =>
+      {
+        entity.HasKey(mc => mc.Id);
+        entity.Property(mc => mc.Created).IsRequired();
+        entity.Property(mc => mc.DataType).IsRequired();
 
-      modelBuilder.Entity<ChatMessage>()
-          .HasOne(cm => cm.Chat)
-          .WithMany(c => c.Messages)
-          .HasForeignKey(cm => cm.ChatId)
-          .OnDelete(DeleteBehavior.Restrict);
+        // Inheritance
+        entity.HasDiscriminator<ChatMessageType>("DataType")
+              .HasValue<MessageTextContent>(ChatMessageType.Text)
+              .HasValue<MessageMediaContent>(ChatMessageType.Media);
+      });
 
-      // Configure one-to-many relationship between ChatMessageContent and ChatMessage
-      modelBuilder.Entity<ChatMessage>()
-          .HasOne(cm => cm.ChatMessageContent)
-          .WithMany(cmc => cmc.ChatMessages)
-          .HasForeignKey(cm => cm.ChatMessageContentId)
-          .OnDelete(DeleteBehavior.Restrict);
+      // Configure MessageMediaContent
+      modelBuilder.Entity<MessageMediaContent>(entity =>
+      {
+        entity.HasOne(mmc => mmc.MediaLink)
+              .WithOne()
+              .HasForeignKey<MessageMediaContent>(mmc => mmc.MediaLinkId)
+              .OnDelete(DeleteBehavior.Cascade); // Cascade when MessageMediaContent is deleted
+      });
 
-      // Configure ChatMessageContent audit fields relationships
-      modelBuilder.Entity<ChatMessageContent>()
-          .HasOne(cmc => cmc.CreatedByUser)
-          .WithMany()
-          .HasForeignKey(cmc => cmc.CreatedByUserId)
-          .OnDelete(DeleteBehavior.Restrict);
+      // Configure MediaLink
+      modelBuilder.Entity<MediaLink>(entity =>
+      {
+        entity.HasKey(ml => ml.Id);
 
-      modelBuilder.Entity<ChatMessageContent>()
-          .HasOne(cmc => cmc.ModifiedByUser)
-          .WithMany()
-          .HasForeignKey(cmc => cmc.ModifiedByUserId)
-          .OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne(ml => ml.Uploader)
+              .WithMany(u => u.UploadedMedia)
+              .HasForeignKey(ml => ml.UploaderId)
+              .OnDelete(DeleteBehavior.Cascade); // Cascade when ApplicationUser is deleted
+      });
 
-      // Self-referencing relationship for ChatMessage (ReplyTo)
-      modelBuilder.Entity<ChatMessage>()
-          .HasOne(cm => cm.ReplyTo)
-          .WithMany()
-          .HasForeignKey(cm => cm.ReplyToId)
-          .OnDelete(DeleteBehavior.Restrict);
+      // Configure MediaGalleryOwner
+      modelBuilder.Entity<MediaGalleryOwner>(entity =>
+      {
+        entity.HasKey(mgo => mgo.Id);
 
-      // One-to-many relationship between ManagementProfile and ArtistProfile
-      modelBuilder.Entity<ManagementProfile>()
-          .HasMany(mp => mp.ArtistProfiles)
-          .WithOne(ap => ap.ManagementProfile)
-          .HasForeignKey(ap => ap.ManagementProfileId);
+        entity.HasOne(mgo => mgo.Gallery)
+              .WithOne(g => g.Owner)
+              .HasForeignKey<MediaGallery>(g => g.OwnerId)
+              .OnDelete(DeleteBehavior.Cascade); // Cascade when MediaGalleryOwner is deleted
 
-      // One-to-many relationship between ManagementProfile and SceneProfile
-      modelBuilder.Entity<ManagementProfile>()
-          .HasMany(mp => mp.SceneProfiles)
-          .WithOne(sp => sp.ManagementProfile)
-          .HasForeignKey(sp => sp.ManagementProfileId);
+        entity.HasOne(mgo => mgo.Chat)
+              .WithOne(c => c.GalleryOwner)
+              .HasForeignKey<MediaGalleryOwner>(mgo => mgo.ChatId)
+              .OnDelete(DeleteBehavior.Cascade); // Ignore deletion of Chat
 
-      // Configurations for MediaGallery relationships (adjusted to one-to-one)
-      modelBuilder.Entity<ArtistProfile>()
-          .HasOne(ap => ap.MediaGallery)
-          .WithOne()
-          .HasForeignKey<ArtistProfile>(ap => ap.MediaGalleryId)
-          .OnDelete(DeleteBehavior.SetNull);
+        entity.HasOne(mgo => mgo.ArtistProfile)
+              .WithOne(ap => ap.GalleryOwner)
+              .HasForeignKey<MediaGalleryOwner>(mgo => mgo.ArtistProfileId)
+              .OnDelete(DeleteBehavior.Cascade); // Ignore deletion of ArtistProfile
 
-      modelBuilder.Entity<SceneProfile>()
-          .HasOne(sp => sp.MediaGallery)
-          .WithOne()
-          .HasForeignKey<SceneProfile>(sp => sp.MediaGalleryId)
-          .OnDelete(DeleteBehavior.SetNull);
+        entity.HasOne(mgo => mgo.SceneProfile)
+              .WithOne(sp => sp.GalleryOwner)
+              .HasForeignKey<MediaGalleryOwner>(mgo => mgo.SceneProfileId)
+              .OnDelete(DeleteBehavior.Cascade); // Ignore deletion of SceneProfile
+      });
 
-      modelBuilder.Entity<Chat>()
-          .HasOne(c => c.MediaGallery)
-          .WithOne()
-          .HasForeignKey<Chat>(c => c.MediaGalleryId)
-          .OnDelete(DeleteBehavior.SetNull);
+      // Configure MediaGallery
+      modelBuilder.Entity<MediaGallery>(entity =>
+      {
+        entity.HasKey(g => g.Id);
 
-      // Configurations for GroupMember
-      modelBuilder.Entity<GroupMember>()
-          .HasOne(gm => gm.ArtistProfile)
-          .WithMany(ap => ap.GroupMembers)
-          .HasForeignKey(gm => gm.ArtistProfileId);
+        entity.HasMany(g => g.Items)
+              .WithOne(mi => mi.Gallery)
+              .HasForeignKey(mi => mi.GalleryId)
+              .OnDelete(DeleteBehavior.Cascade); // Cascade when MediaGallery is deleted
+      });
+
+      // Configure MediaItem
+      modelBuilder.Entity<MediaItem>(entity =>
+      {
+        entity.HasKey(mi => mi.Id);
+
+        entity.HasOne(mi => mi.Link)
+              .WithOne()
+              .HasForeignKey<MediaItem>(mi => mi.LinkId)
+              .OnDelete(DeleteBehavior.Cascade); // Cascade when MediaItem is deleted
+      });
+
+      // Configure ArtistProfile
+      modelBuilder.Entity<ArtistProfile>(entity =>
+      {
+        entity.HasMany(ap => ap.Members)
+              .WithOne(am => am.ArtistProfile)
+              .HasForeignKey(am => am.ArtistProfileId)
+              .OnDelete(DeleteBehavior.Cascade); // Cascade when ArtistProfile is deleted
+
+        entity.HasMany(ap => ap.Genres)
+              .WithMany(g => g.ArtistProfiles); // Ignore deletion
+      });
+
+      // Configure SceneProfile
+      modelBuilder.Entity<SceneProfile>(entity =>
+      {
+        entity.HasMany(sp => sp.Genres)
+              .WithMany(g => g.SceneProfiles); // Ignore deletion
+      });
+
+      // Configure Genre
+      modelBuilder.Entity<Genre>(entity =>
+      {
+        entity.HasKey(g => g.Id);
+
+        entity.HasMany(g => g.ArtistProfiles)
+              .WithMany(ap => ap.Genres); // Ignore deletion
+
+        entity.HasMany(g => g.SceneProfiles)
+              .WithMany(sp => sp.Genres); // Ignore deletion
+      });
+
+
     }
   }
 }
