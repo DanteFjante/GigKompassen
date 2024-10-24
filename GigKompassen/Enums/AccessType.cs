@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace GigKompassen.Enums
 {
-  public enum MediaType
+  public enum AccessType
   {
-    Audio,
-    Image,
-    Video
+    View,
+    Edit,
+    Delete,
   }
 }

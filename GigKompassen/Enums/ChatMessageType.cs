@@ -3,7 +3,7 @@
   public enum ChatMessageType
   {
     Text,
-    MediaItem
+    Media
   }
 }
 

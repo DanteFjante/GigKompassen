@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace GigKompassen.Enums
 {
   public enum AvailabilityStatus
   {
-    NotLookingForGigs,
-    OpenForGigs,
-    NotOpenForInvites,
-    OpenForInvites
+    [Display(Name = "Open For Gigs")]
+    Open,
+    [Display(Name = "Not Accepting Invites")]
+    Closed
   }
 }

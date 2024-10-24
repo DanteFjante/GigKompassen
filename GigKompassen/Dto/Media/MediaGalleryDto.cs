@@ -4,12 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GigKompassen.Enums
+namespace GigKompassen.Dto.Media
 {
-  public enum MediaType
+  public class MediaGalleryDto
   {
-    Audio,
-    Image,
-    Video
+    public Guid? Id { get; set; }
   }
 }

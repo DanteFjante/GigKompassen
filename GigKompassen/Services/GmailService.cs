@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 using MimeKit;
 
-namespace EventKalendern.Core.Services
+namespace GigKompassen.Services
 {
   public class GmailService : IEmailSender
   {

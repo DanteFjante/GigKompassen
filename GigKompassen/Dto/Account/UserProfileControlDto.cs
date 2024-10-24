@@ -4,12 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GigKompassen.Enums
+namespace GigKompassen.Dto.Account
 {
-  public enum MediaType
+  public class UserProfileControlDto
   {
-    Audio,
-    Image,
-    Video
   }
 }
