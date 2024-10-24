@@ -6,6 +6,7 @@
 
 <link rel="stylesheet" href="~/css/Register.css" />
 
+  
 <div class="complete-profile-container">
   <div class="complete-profile-form">
     <h1>@ViewData["Title"]</h1>
@@ -27,34 +28,21 @@
       @* Add additional fields based on the user's role *@
       @if (Model.AccountType == "Artist")
       {
-        <div class="form-floating mb-3">
-          <input asp-for="Input.ArtistGroupName" class="form-control" placeholder="Artist Group Name" />
-          <label asp-for="Input.ArtistGroupName">Artist Group Name</label>
-          <span asp-validation-for="Input.ArtistGroupName" class="text-danger"></span>
-        </div>
+        @await Html.PartialAsync("Partials/Forms/_CreateArtistProfilePartial", Model.ArtistProfile);
       }
       else if (Model.AccountType == "Scene")
       {
-        <div class="form-floating mb-3">
-          <input asp-for="Input.SceneName" class="form-control" placeholder="Scene Name" />
-          <label asp-for="Input.SceneName">Scene Name</label>
-          <span asp-validation-for="Input.SceneName" class="text-danger"></span>
-        </div>
+        @await Html.PartialAsync("Partials/Forms/_CreateSceneProfilePartial", Model.SceneProfile);
       }
       else if (Model.AccountType == "Manager")
       {
-        <div class="form-floating mb-3">
-          <input asp-for="Input.CompanyName" class="form-control" placeholder="Company Name" />
-          <label asp-for="Input.CompanyName">Company Name</label>
-          <span asp-validation-for="Input.CompanyName" class="text-danger"></span>
-        </div>
+        @await Html.PartialAsync("Partials/Forms/_CreateManagementProfilePartial", Model.ManagerProfile);
       }
 
       <button type="submit" class="w-100 btn btn-lg btn-primary">Complete Registration</button>
     </form>
   </div>
 </div>
-
 @section Scripts {
   <partial name="_ValidationScriptsPartial" />
 }
