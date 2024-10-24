@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace GigKompassen.Web.Migrations
 {
     /// <inheritdoc />
-    public partial class mssqllocal_migration_242 : Migration
+    public partial class mssqllocal_migration_440 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -32,9 +32,9 @@ namespace GigKompassen.Web.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     FirstName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     LastName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ProfileCompleted = table.Column<bool>(type: "bit", nullable: false),
                     Created = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    LastLoggedIn = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    ApplicationRole = table.Column<int>(type: "int", nullable: false),
+                    LastLogin = table.Column<DateTime>(type: "datetime2", nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -56,6 +56,19 @@ namespace GigKompassen.Web.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Chats",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Created = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Chats", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Genres",
                 columns: table => new
                 {
@@ -68,14 +81,31 @@ namespace GigKompassen.Web.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "MediaGalleries",
+                name: "Profiles",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Public = table.Column<bool>(type: "bit", nullable: false),
+                    ProfileType = table.Column<int>(type: "int", nullable: false),
+                    ArtistProfile_Location = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Bio = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ArtistProfile_Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Availability = table.Column<int>(type: "int", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Location = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    VenueType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ContactInfo = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Capacity = table.Column<int>(type: "int", nullable: true),
+                    SceneProfile_Bio = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SceneProfile_Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Amenities = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OpeningHours = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_MediaGalleries", x => x.Id);
+                    table.PrimaryKey("PK_Profiles", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -185,41 +215,191 @@ namespace GigKompassen.Web.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ManagementProfiles",
+                name: "MediaLinks",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ApplicationUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    Uploaded = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    MediaType = table.Column<int>(type: "int", nullable: false),
+                    Path = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UploaderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ManagementProfiles", x => x.Id);
+                    table.PrimaryKey("PK_MediaLinks", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ManagementProfiles_AspNetUsers_ApplicationUserId",
-                        column: x => x.ApplicationUserId,
+                        name: "FK_MediaLinks_AspNetUsers_UploaderId",
+                        column: x => x.UploaderId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Chats",
+                name: "ArtistMembers",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ChatName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Created = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    MediaGalleryId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Role = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ArtistProfileId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Chats", x => x.Id);
+                    table.PrimaryKey("PK_ArtistMembers", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Chats_MediaGalleries_MediaGalleryId",
-                        column: x => x.MediaGalleryId,
-                        principalTable: "MediaGalleries",
+                        name: "FK_ArtistMembers_Profiles_ArtistProfileId",
+                        column: x => x.ArtistProfileId,
+                        principalTable: "Profiles",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ArtistProfileGenre",
+                columns: table => new
+                {
+                    ArtistProfilesId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    GenresId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ArtistProfileGenre", x => new { x.ArtistProfilesId, x.GenresId });
+                    table.ForeignKey(
+                        name: "FK_ArtistProfileGenre_Genres_GenresId",
+                        column: x => x.GenresId,
+                        principalTable: "Genres",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ArtistProfileGenre_Profiles_ArtistProfilesId",
+                        column: x => x.ArtistProfilesId,
+                        principalTable: "Profiles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "GenreSceneProfile",
+                columns: table => new
+                {
+                    GenresId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    SceneProfilesId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GenreSceneProfile", x => new { x.GenresId, x.SceneProfilesId });
+                    table.ForeignKey(
+                        name: "FK_GenreSceneProfile_Genres_GenresId",
+                        column: x => x.GenresId,
+                        principalTable: "Genres",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_GenreSceneProfile_Profiles_SceneProfilesId",
+                        column: x => x.SceneProfilesId,
+                        principalTable: "Profiles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MediaGalleryOwners",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    GalleryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ChatId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ArtistProfileId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    SceneProfileId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MediaGalleryOwners", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MediaGalleryOwners_Chats_ChatId",
+                        column: x => x.ChatId,
+                        principalTable: "Chats",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_MediaGalleryOwners_Profiles_ArtistProfileId",
+                        column: x => x.ArtistProfileId,
+                        principalTable: "Profiles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_MediaGalleryOwners_Profiles_SceneProfileId",
+                        column: x => x.SceneProfileId,
+                        principalTable: "Profiles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ProfileAccesses",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    AccessType = table.Column<int>(type: "int", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProfileId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProfileAccesses", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ProfileAccesses_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ProfileAccesses_Profiles_ProfileId",
+                        column: x => x.ProfileId,
+                        principalTable: "Profiles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MessageContents",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Created = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DataType = table.Column<int>(type: "int", nullable: false),
+                    Comment = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    MediaLinkId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Text = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MessageContents", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MessageContents_MediaLinks_MediaLinkId",
+                        column: x => x.MediaLinkId,
+                        principalTable: "MediaLinks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MediaGalleries",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MediaGalleries", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MediaGalleries_MediaGalleryOwners_OwnerId",
+                        column: x => x.OwnerId,
+                        principalTable: "MediaGalleryOwners",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -227,168 +407,24 @@ namespace GigKompassen.Web.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ApplicationUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    MediaType = table.Column<int>(type: "int", nullable: false),
-                    UploadDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    FilePath = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    MediaGalleryId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    GalleryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    LinkId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_MediaItems", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_MediaItems_AspNetUsers_ApplicationUserId",
-                        column: x => x.ApplicationUserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_MediaItems_MediaGalleries_MediaGalleryId",
-                        column: x => x.MediaGalleryId,
-                        principalTable: "MediaGalleries",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ArtistProfiles",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Location = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Availability = table.Column<int>(type: "int", nullable: false),
-                    Bio = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    MediaGalleryId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    ManagementProfileId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ArtistProfiles", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ArtistProfiles_ManagementProfiles_ManagementProfileId",
-                        column: x => x.ManagementProfileId,
-                        principalTable: "ManagementProfiles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_ArtistProfiles_MediaGalleries_MediaGalleryId",
-                        column: x => x.MediaGalleryId,
+                        name: "FK_MediaItems_MediaGalleries_GalleryId",
+                        column: x => x.GalleryId,
                         principalTable: "MediaGalleries",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "SceneProfiles",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    VenueName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Address = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    VenueType = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ContactInfo = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Capacity = table.Column<int>(type: "int", nullable: false),
-                    Amenities = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    OpeningHours = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    MediaGalleryId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    ManagementProfileId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SceneProfiles", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_SceneProfiles_ManagementProfiles_ManagementProfileId",
-                        column: x => x.ManagementProfileId,
-                        principalTable: "ManagementProfiles",
-                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_SceneProfiles_MediaGalleries_MediaGalleryId",
-                        column: x => x.MediaGalleryId,
-                        principalTable: "MediaGalleries",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ChatMessageContents",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ChatMessageType = table.Column<int>(type: "int", nullable: false),
-                    DateTimeCreated = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Message = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    MediaItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    FlaggedForDeletion = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ModifiedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ModifiedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ChatMessageContents", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ChatMessageContents_AspNetUsers_CreatedByUserId",
-                        column: x => x.CreatedByUserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_ChatMessageContents_AspNetUsers_ModifiedByUserId",
-                        column: x => x.ModifiedByUserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_ChatMessageContents_MediaItems_MediaItemId",
-                        column: x => x.MediaItemId,
-                        principalTable: "MediaItems",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ArtistProfileGenre",
-                columns: table => new
-                {
-                    ArtistProfileId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    GenreId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ArtistProfileGenre", x => new { x.ArtistProfileId, x.GenreId });
-                    table.ForeignKey(
-                        name: "FK_ArtistProfileGenre_ArtistProfiles_ArtistProfileId",
-                        column: x => x.ArtistProfileId,
-                        principalTable: "ArtistProfiles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_ArtistProfileGenre_Genres_GenreId",
-                        column: x => x.GenreId,
-                        principalTable: "Genres",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "GroupMembers",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ArtistProfileId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Role = table.Column<string>(type: "nvarchar(max)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_GroupMembers", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_GroupMembers_ArtistProfiles_ArtistProfileId",
-                        column: x => x.ArtistProfileId,
-                        principalTable: "ArtistProfiles",
+                        name: "FK_MediaItems_MediaLinks_LinkId",
+                        column: x => x.LinkId,
+                        principalTable: "MediaLinks",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -398,33 +434,33 @@ namespace GigKompassen.Web.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Sent = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ChatId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    DateTimeSent = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    ChatParticipantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ReplyToId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    ChatMessageContentId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    SenderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ContentId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ReplyToId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ChatMessages", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ChatMessages_ChatMessageContents_ChatMessageContentId",
-                        column: x => x.ChatMessageContentId,
-                        principalTable: "ChatMessageContents",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
                         name: "FK_ChatMessages_ChatMessages_ReplyToId",
                         column: x => x.ReplyToId,
                         principalTable: "ChatMessages",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_ChatMessages_Chats_ChatId",
                         column: x => x.ChatId,
                         principalTable: "Chats",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ChatMessages_MessageContents_ContentId",
+                        column: x => x.ContentId,
+                        principalTable: "MessageContents",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -432,49 +468,42 @@ namespace GigKompassen.Web.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ChatId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ApplicationUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    LastReadMessageId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    LastReadId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ChatParticipants", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ChatParticipants_AspNetUsers_ApplicationUserId",
-                        column: x => x.ApplicationUserId,
+                        name: "FK_ChatParticipants_AspNetUsers_UserId",
+                        column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ChatParticipants_ChatMessages_LastReadMessageId",
-                        column: x => x.LastReadMessageId,
+                        name: "FK_ChatParticipants_ChatMessages_LastReadId",
+                        column: x => x.LastReadId,
                         principalTable: "ChatMessages",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_ChatParticipants_Chats_ChatId",
                         column: x => x.ChatId,
                         principalTable: "Chats",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ArtistProfileGenre_GenreId",
+                name: "IX_ArtistMembers_ArtistProfileId",
+                table: "ArtistMembers",
+                column: "ArtistProfileId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ArtistProfileGenre_GenresId",
                 table: "ArtistProfileGenre",
-                column: "GenreId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ArtistProfiles_ManagementProfileId",
-                table: "ArtistProfiles",
-                column: "ManagementProfileId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ArtistProfiles_MediaGalleryId",
-                table: "ArtistProfiles",
-                column: "MediaGalleryId",
-                unique: true,
-                filter: "[MediaGalleryId] IS NOT NULL");
+                column: "GenresId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -516,99 +545,114 @@ namespace GigKompassen.Web.Migrations
                 filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ChatMessageContents_CreatedByUserId",
-                table: "ChatMessageContents",
-                column: "CreatedByUserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ChatMessageContents_MediaItemId",
-                table: "ChatMessageContents",
-                column: "MediaItemId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ChatMessageContents_ModifiedByUserId",
-                table: "ChatMessageContents",
-                column: "ModifiedByUserId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_ChatMessages_ChatId",
                 table: "ChatMessages",
                 column: "ChatId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ChatMessages_ChatMessageContentId",
+                name: "IX_ChatMessages_ContentId",
                 table: "ChatMessages",
-                column: "ChatMessageContentId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ChatMessages_ChatParticipantId",
-                table: "ChatMessages",
-                column: "ChatParticipantId");
+                column: "ContentId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_ChatMessages_ReplyToId",
                 table: "ChatMessages",
-                column: "ReplyToId");
+                column: "ReplyToId",
+                unique: true,
+                filter: "[ReplyToId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ChatParticipants_ApplicationUserId",
-                table: "ChatParticipants",
-                column: "ApplicationUserId");
+                name: "IX_ChatMessages_SenderId",
+                table: "ChatMessages",
+                column: "SenderId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ChatParticipants_ChatId_ApplicationUserId",
+                name: "IX_ChatParticipants_ChatId",
                 table: "ChatParticipants",
-                columns: new[] { "ChatId", "ApplicationUserId" },
+                column: "ChatId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatParticipants_LastReadId",
+                table: "ChatParticipants",
+                column: "LastReadId",
+                unique: true,
+                filter: "[LastReadId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChatParticipants_UserId",
+                table: "ChatParticipants",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GenreSceneProfile_SceneProfilesId",
+                table: "GenreSceneProfile",
+                column: "SceneProfilesId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MediaGalleries_OwnerId",
+                table: "MediaGalleries",
+                column: "OwnerId",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_ChatParticipants_LastReadMessageId",
-                table: "ChatParticipants",
-                column: "LastReadMessageId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Chats_MediaGalleryId",
-                table: "Chats",
-                column: "MediaGalleryId",
+                name: "IX_MediaGalleryOwners_ArtistProfileId",
+                table: "MediaGalleryOwners",
+                column: "ArtistProfileId",
                 unique: true,
-                filter: "[MediaGalleryId] IS NOT NULL");
+                filter: "[ArtistProfileId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_GroupMembers_ArtistProfileId",
-                table: "GroupMembers",
-                column: "ArtistProfileId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ManagementProfiles_ApplicationUserId",
-                table: "ManagementProfiles",
-                column: "ApplicationUserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_MediaItems_ApplicationUserId",
-                table: "MediaItems",
-                column: "ApplicationUserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_MediaItems_MediaGalleryId",
-                table: "MediaItems",
-                column: "MediaGalleryId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_SceneProfiles_ManagementProfileId",
-                table: "SceneProfiles",
-                column: "ManagementProfileId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_SceneProfiles_MediaGalleryId",
-                table: "SceneProfiles",
-                column: "MediaGalleryId",
+                name: "IX_MediaGalleryOwners_ChatId",
+                table: "MediaGalleryOwners",
+                column: "ChatId",
                 unique: true,
-                filter: "[MediaGalleryId] IS NOT NULL");
+                filter: "[ChatId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MediaGalleryOwners_SceneProfileId",
+                table: "MediaGalleryOwners",
+                column: "SceneProfileId",
+                unique: true,
+                filter: "[SceneProfileId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MediaItems_GalleryId",
+                table: "MediaItems",
+                column: "GalleryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MediaItems_LinkId",
+                table: "MediaItems",
+                column: "LinkId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MediaLinks_UploaderId",
+                table: "MediaLinks",
+                column: "UploaderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MessageContents_MediaLinkId",
+                table: "MessageContents",
+                column: "MediaLinkId",
+                unique: true,
+                filter: "[MediaLinkId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProfileAccesses_ProfileId",
+                table: "ProfileAccesses",
+                column: "ProfileId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProfileAccesses_UserId",
+                table: "ProfileAccesses",
+                column: "UserId");
 
             migrationBuilder.AddForeignKey(
-                name: "FK_ChatMessages_ChatParticipants_ChatParticipantId",
+                name: "FK_ChatMessages_ChatParticipants_SenderId",
                 table: "ChatMessages",
-                column: "ChatParticipantId",
+                column: "SenderId",
                 principalTable: "ChatParticipants",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Restrict);
@@ -618,40 +662,19 @@ namespace GigKompassen.Web.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropForeignKey(
-                name: "FK_Chats_MediaGalleries_MediaGalleryId",
-                table: "Chats");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_MediaItems_MediaGalleries_MediaGalleryId",
-                table: "MediaItems");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_ChatMessageContents_AspNetUsers_CreatedByUserId",
-                table: "ChatMessageContents");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_ChatMessageContents_AspNetUsers_ModifiedByUserId",
-                table: "ChatMessageContents");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_ChatParticipants_AspNetUsers_ApplicationUserId",
+                name: "FK_ChatParticipants_AspNetUsers_UserId",
                 table: "ChatParticipants");
 
             migrationBuilder.DropForeignKey(
-                name: "FK_MediaItems_AspNetUsers_ApplicationUserId",
-                table: "MediaItems");
+                name: "FK_MediaLinks_AspNetUsers_UploaderId",
+                table: "MediaLinks");
 
             migrationBuilder.DropForeignKey(
-                name: "FK_ChatMessageContents_MediaItems_MediaItemId",
-                table: "ChatMessageContents");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_ChatMessages_ChatMessageContents_ChatMessageContentId",
+                name: "FK_ChatMessages_ChatParticipants_SenderId",
                 table: "ChatMessages");
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_ChatMessages_ChatParticipants_ChatParticipantId",
-                table: "ChatMessages");
+            migrationBuilder.DropTable(
+                name: "ArtistMembers");
 
             migrationBuilder.DropTable(
                 name: "ArtistProfileGenre");
@@ -672,34 +695,31 @@ namespace GigKompassen.Web.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "GroupMembers");
-
-            migrationBuilder.DropTable(
-                name: "SceneProfiles");
-
-            migrationBuilder.DropTable(
-                name: "Genres");
-
-            migrationBuilder.DropTable(
-                name: "AspNetRoles");
-
-            migrationBuilder.DropTable(
-                name: "ArtistProfiles");
-
-            migrationBuilder.DropTable(
-                name: "ManagementProfiles");
-
-            migrationBuilder.DropTable(
-                name: "MediaGalleries");
-
-            migrationBuilder.DropTable(
-                name: "AspNetUsers");
+                name: "GenreSceneProfile");
 
             migrationBuilder.DropTable(
                 name: "MediaItems");
 
             migrationBuilder.DropTable(
-                name: "ChatMessageContents");
+                name: "ProfileAccesses");
+
+            migrationBuilder.DropTable(
+                name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "Genres");
+
+            migrationBuilder.DropTable(
+                name: "MediaGalleries");
+
+            migrationBuilder.DropTable(
+                name: "MediaGalleryOwners");
+
+            migrationBuilder.DropTable(
+                name: "Profiles");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUsers");
 
             migrationBuilder.DropTable(
                 name: "ChatParticipants");
@@ -709,6 +729,12 @@ namespace GigKompassen.Web.Migrations
 
             migrationBuilder.DropTable(
                 name: "Chats");
+
+            migrationBuilder.DropTable(
+                name: "MessageContents");
+
+            migrationBuilder.DropTable(
+                name: "MediaLinks");
         }
     }
 }
