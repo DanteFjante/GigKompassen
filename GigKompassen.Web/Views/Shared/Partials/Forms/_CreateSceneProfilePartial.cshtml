@@ -1,0 +1,128 @@
+﻿@model GigKompassen.Web.Models.Profiles.Create.CreateSceneProfileViewModel
+
+<h4>Create Scene Profile</h4>
+<hr />
+
+<!-- VenueName -->
+<div class="form-group">
+  <label asp-for="VenueName" class="control-label"></label>
+  <input asp-for="VenueName" class="form-control" />
+  <span asp-validation-for="VenueName" class="text-danger"></span>
+</div>
+
+<!-- Address -->
+<div class="form-group">
+  <label asp-for="Address" class="control-label"></label>
+  <input asp-for="Address" class="form-control" />
+  <span asp-validation-for="Address" class="text-danger"></span>
+</div>
+
+<!-- Venuetype -->
+<div class="form-group">
+  <label asp-for="VenueType" class="control-label"></label>
+  <input asp-for="VenueType" class="form-control" />
+  <span asp-validation-for="VenueType" class="text-danger"></span>
+</div>
+
+<!-- ContactInfo -->
+<div class="form-group">
+  <label asp-for="ContactInfo" class="control-label"></label>
+  <input asp-for="ContactInfo" class="form-control" />
+  <span asp-validation-for="ContactInfo" class="text-danger"></span>
+</div>
+
+<!-- Capacity -->
+<div class="form-group">
+  <label asp-for="Capacity" class="control-label"></label>
+  <input asp-for="Capacity" class="form-control" />
+  <span asp-validation-for="Capacity" class="text-danger"></span>
+</div>
+
+<!-- Amenities -->
+<div class="form-group">
+  <label asp-for="Amenities" class="control-label"></label>
+  <input asp-for="Amenities" class="form-control" />
+  <span asp-validation-for="Amenities" class="text-danger"></span>
+</div>
+
+<!-- Bio -->
+<div class="form-group">
+  <label asp-for="Bio" class="control-label"></label>
+  <textarea asp-for="Bio" class="form-control"></textarea>
+  <span asp-validation-for="Bio" class="text-danger"></span>
+</div>
+
+<!-- Description -->
+<div class="form-group">
+  <label asp-for="Description" class="control-label"></label>
+  <textarea asp-for="Description" class="form-control"></textarea>
+  <span asp-validation-for="Description" class="text-danger"></span>
+</div>
+
+<!-- OpeningHours -->
+<div class="form-group">
+  <label asp-for="OpeningHours" class="control-label"></label>
+  <input asp-for="OpeningHours" class="form-control" />
+  <span asp-validation-for="OpeningHours" class="text-danger"></span>
+</div>
+
+<!-- Genres -->
+<div class="form-group">
+  <label>Genres</label>
+  <table class="table" id="SceneGenresTable">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>
+          <button type="button" id="addSceneGenreButton" class="btn btn-sm btn-success">Add Genre</button>
+        </th>
+      </tr>
+    </thead>
+    <tbody id="SceneGenresTableBody">
+      <!-- Genres will be dynamically added here -->
+    </tbody>
+  </table>
+</div>
+
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+  $(document).ready(function() {
+    let genreIndex = $('#SceneGenresTableBody tr').length;
+
+    $('#addSceneGenreButton').click(function() {
+      // Create a new row
+      const row = $('<tr></tr>');
+
+      // Create a cell for the genre name
+      const genreCell = $('<td></td>');
+      const genreInput = $('<input type="text" class="form-control" name="Genres[' + genreIndex + ']" />');
+      genreCell.append(genreInput);
+      row.append(genreCell);
+
+      // Create a cell for the delete button
+      const deleteCell = $('<td></td>');
+      const deleteButton = $('<button type="button" class="btn btn-sm btn-danger">Delete</button>');
+      deleteButton.click(function() {
+        row.remove();
+        updateGenreIndices();
+      });
+      deleteCell.append(deleteButton);
+      row.append(deleteCell);
+
+      // Append the row to the GenresTable tbody
+      $('#SceneGenresTableBody').append(row);
+
+      // Increment genre index
+      genreIndex++;
+    });
+
+    function updateGenreIndices() {
+      genreIndex = 0;
+      $('#SceneGenresTableBody tr').each(function() {
+        $(this).find('input').attr('name', 'Genres[' + genreIndex + ']');
+        genreIndex++;
+      });
+    }
+  });
+</script>

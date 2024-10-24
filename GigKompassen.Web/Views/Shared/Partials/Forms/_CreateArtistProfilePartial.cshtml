@@ -1,0 +1,184 @@
+﻿@model GigKompassen.Web.Models.Profiles.Create.CreateArtistProfileViewModel
+@using GigKompassen.Enums
+
+<h4>Create Artist Profile</h4>
+<hr />
+
+<!-- Name -->
+<div class="form-group">
+  <label asp-for="Name" class="control-label"></label>
+  <input asp-for="Name" class="form-control" name="ArtistProfile.Name" />
+  <span asp-validation-for="Name" class="text-danger"></span>
+</div>
+
+<!-- Location -->
+<div class="form-group">
+  <label asp-for="Location" class="control-label"></label>
+  <input asp-for="Location" class=" form-control" name="ArtistProfile.Location"/>
+  <span asp-validation-for="Location" class="text-danger"></span>
+</div>
+
+<!-- Availability -->
+<div class="form-group">
+  <label asp-for="Availability" class="control-label"></label>
+  <select asp-for="Availability" class="form-control" name="ArtistProfile.Availability">
+    @foreach (var status in Enum.GetValues(typeof(AvailabilityStatus)))
+    {
+      <option value="@status">@status</option>
+    }
+  </select>
+  <span asp-validation-for="Availability" class="text-danger"></span>
+</div>
+
+<!-- Bio -->
+<div class="form-group">
+  <label asp-for="Bio" class="control-label"></label>
+  <textarea asp-for="Bio" class="form-control" name="ArtistProfile.Bio"></textarea>
+  <span asp-validation-for="Bio" class="text-danger"></span>
+</div>
+
+<!-- Description -->
+<div class="form-group">
+  <label asp-for="Description" class="control-label"></label>
+  <textarea asp-for="Description" class="form-control" name="ArtistProfile.Description"></textarea>
+  <span asp-validation-for="Description" class="text-danger"></span>
+</div>
+
+<!-- Genres -->
+<div class="form-group">
+  <label>Genres</label>
+  <table class="table" id="ArtistGenresTable">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>
+          <button type="button" id="addArtistGenreButton" class="btn btn-sm btn-success">Add Genre</button>
+        </th>
+      </tr>
+    </thead>
+    <tbody id="ArtistGenresTableBody">
+      @for (int i = 0; i < Model.Genres.Count; i++)
+      {
+        <tr>
+          <td>
+            <input type="text" asp-for="Genres[i]" class="form-control" name="ArtistProfile.Genres[{i}]" />
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<!-- Artist Members -->
+<div class="form-group">
+  <label>Artist Members</label>
+  <table class="table" id="ArtistMembersTable">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Role</th>
+        <th>
+          <button type="button" id="addArtistMemberButton" class="btn btn-sm btn-success">Add Member</button>
+        </th>
+      </tr>
+    </thead>
+    <tbody id="ArtistMembersTableBody">
+      @for (int i = 0; i < Model.Members.Count; i++)
+      {
+        <tr>
+          <td>
+            <input type="text" asp-for="Members[i].Name" name="ArtistProfile.Members[{i}].Name" class="form-control" />
+          </td>
+          <td>
+            <input type="text" asp-for="Members[i].Role" name="ArtistProfile.Members[{i}].Role" class="form-control" />
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+  $(document).ready(function() {
+    let genreIndex = $('#ArtistGenresTableBody tr').length;
+    let memberIndex = $('#ArtistMembersTableBody tr').length;
+
+    $('#addArtistGenreButton').click(function() {
+      // Create a new row
+      const row = $('<tr></tr>');
+
+      // Create a cell for the genre name
+      const genreCell = $('<td></td>');
+      const genreInput = $('<input type="text" class="form-control" name="ArtistProfile.Genres[' + genreIndex + ']" />');
+      genreCell.append(genreInput);
+      row.append(genreCell);
+
+      // Create a cell for the delete button
+      const deleteCell = $('<td></td>');
+      const deleteButton = $('<button type="button" class="btn btn-sm btn-danger">Delete</button>');
+      deleteButton.click(function() {
+        row.remove();
+        updateGenreIndices();
+      });
+      deleteCell.append(deleteButton);
+      row.append(deleteCell);
+
+      // Append the row to the GenresTable tbody
+      $('#ArtistGenresTableBody').append(row);
+
+      // Increment genre index
+      genreIndex++;
+    });
+
+    $('#addArtistMemberButton').click(function() {
+      // Create a new row
+      const row = $('<tr></tr>');
+
+      // Create a cell for the member name
+      const nameCell = $('<td></td>');
+      const nameInput = $('<input type="text" class="form-control" name="ArtistProfile.Members[' + memberIndex + '].Name" />');
+      nameCell.append(nameInput);
+      row.append(nameCell);
+
+      // Create a cell for the member role
+      const roleCell = $('<td></td>');
+      const roleInput = $('<input type="text" class="form-control" name="ArtistProfile.Members[' + memberIndex + '].Role" />');
+      roleCell.append(roleInput);
+      row.append(roleCell);
+
+      // Create a cell for the delete button
+      const deleteCell = $('<td></td>');
+      const deleteButton = $('<button type="button" class="btn btn-sm btn-danger">Delete</button>');
+      deleteButton.click(function() {
+        row.remove();
+        updateMemberIndices();
+      });
+      deleteCell.append(deleteButton);
+      row.append(deleteCell);
+
+      // Append the row to the MembersTable tbody
+      $('#ArtistMembersTableBody').append(row);
+
+      // Increment member index
+      memberIndex++;
+    });
+
+    function updateGenreIndices() {
+      genreIndex = 0;
+      $('#ArtistGenresTableBody tr').each(function() {
+        $(this).find('input').attr('name', 'Genres[' + genreIndex + ']');
+        genreIndex++;
+      });
+    }
+
+    function updateGroupMemberIndices() {
+      memberIndex = 0;
+      $('#ArtistMembersTableBody tr').each(function() {
+        $(this).find('input[name$=".Name"]').attr('name', 'Members[' + memberIndex + '].Name');
+        $(this).find('input[name$=".Role"]').attr('name', 'Members[' + memberIndex + '].Role');
+        memberIndex++;
+      });
+    }
+  });
+</script>
