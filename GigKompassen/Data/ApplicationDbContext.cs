@@ -1,5 +1,4 @@
-﻿using GigKompassen.Authorization.Identity;
-using GigKompassen.Enums;
+﻿using GigKompassen.Enums;
 using GigKompassen.Models.Accounts;
 using GigKompassen.Models.Chats;
 using GigKompassen.Models.Media;

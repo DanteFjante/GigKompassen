@@ -27,7 +27,7 @@ namespace GigKompassen.Services
       return profile;
     }
 
-    public async Task<ManagerProfile?> CreateAsync(ManagerProfileDto managerProfile)
+    public async Task<ManagerProfile?> CreateAsync(Guid userId, ManagerProfileDto managerProfile)
     {
 
       if (managerProfile == null)
@@ -36,16 +36,25 @@ namespace GigKompassen.Services
       if (string.IsNullOrEmpty(managerProfile.Name))
         throw new ArgumentException("Name is required");
 
+      var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+      if (user == null)
+        throw new KeyNotFoundException("User not found");
+
       ManagerProfile profile = new ManagerProfile()
       {
         Id = managerProfile.Id ?? Guid.NewGuid(),
         Name = managerProfile.Name,
-        Description = managerProfile.Description,
-        Location = managerProfile.Location
+        Description = managerProfile.Description ?? "",
+        Location = managerProfile.Location ?? ""
       };
-      var ret = (await _context.ManagerProfiles.AddAsync(profile)).Entity;
+
+      profile.Owner = user;
+      profile.OwnerId = userId;
+      user.OwnedProfiles?.Add(profile);
+
+      await _context.ManagerProfiles.AddAsync(profile);
       await _context.SaveChangesAsync();
-      return ret;
+      return profile;
     }
 
     public async Task<ManagerProfile> UpdateAsync(Guid id, ManagerProfileDto dto)

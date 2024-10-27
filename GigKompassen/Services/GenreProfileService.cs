@@ -16,32 +16,42 @@ namespace GigKompassen.Services
 
     public async Task<bool> ArtistHasGenreAsync(Guid artistId, string genreName)
     {
-      return await _context.ArtistProfiles.Include(a => a.Genres).AnyAsync(a => a.Genres.Any(g => g.Name.Equals(genreName)));
+      return await _context.ArtistProfiles.Include(a => a.Genres).Where(s => s.Id == artistId).AnyAsync(a => a.Genres.Any(g => g.Name.Equals(genreName)));
     }
 
     public async Task<bool> ArtistHasGenreAsync(Guid artistId, Guid genreId)
     {
-      return await _context.ArtistProfiles.Include(a => a.Genres).AnyAsync(a => a.Genres.Any(g => g.Id == genreId));
+      return await _context.ArtistProfiles.Include(a => a.Genres).Where(s => s.Id == artistId).AnyAsync(a => a.Genres.Any(g => g.Id == genreId));
     }
 
     public async Task<bool> SceneHasGenreAsync(Guid sceneId, string genreName)
     {
-      return await _context.SceneProfiles.Include(a => a.Genres).AnyAsync(a => a.Genres.Any(g => g.Name.Equals(genreName)));
+      return await _context.SceneProfiles.Include(a => a.Genres).Where(s => s.Id == sceneId).AnyAsync(a => a.Genres.Any(g => g.Name.Equals(genreName)));
     }
 
     public async Task<bool> SceneHasGenreAsync(Guid sceneId, Guid genreId)
     {
-      return await _context.SceneProfiles.Include(a => a.Genres).AnyAsync(a => a.Genres.Any(g => g.Id == genreId));
+      return await _context.SceneProfiles.Include(a => a.Genres).Where(s => s.Id == sceneId).AnyAsync(a => a.Genres.Any(g => g.Id == genreId));
     }
 
     public async Task<bool> GenreHasArtistAsync(Guid genreId, Guid artistId)
     {
-      return await _context.Genres.Include(g => g.ArtistProfiles).AnyAsync(g => g.ArtistProfiles.Any(a => a.Id == artistId));
+      return await _context.Genres.Include(g => g.ArtistProfiles).Where(g => g.Id == genreId).AnyAsync(g => g.ArtistProfiles.Any(a => a.Id == artistId));
+    }
+
+    public async Task<bool> GenreHasArtistAsync(string genre, Guid artistId)
+    {
+      return await _context.Genres.Include(g => g.ArtistProfiles).Where(g => g.Name == genre).AnyAsync(g => g.ArtistProfiles.Any(a => a.Id == artistId));
     }
 
     public async Task<bool> GenreHasSceneAsync(Guid genreId, Guid sceneId)
     {
-      return await _context.Genres.Include(g => g.SceneProfiles).AnyAsync(g => g.SceneProfiles.Any(a => a.Id == sceneId));
+      return await _context.Genres.Include(g => g.SceneProfiles).Where(g => g.Id == genreId).AnyAsync(g => g.SceneProfiles.Any(a => a.Id == sceneId));
+    }
+
+    public async Task<bool> GenreHasSceneAsync(string genre, Guid sceneId)
+    {
+      return await _context.Genres.Include(g => g.SceneProfiles).Where(g => g.Name == genre).AnyAsync(g => g.SceneProfiles.Any(a => a.Id == sceneId));
     }
 
     public async Task<bool> AddGenreToArtist(Guid artistId, string genreName)
@@ -74,7 +84,7 @@ namespace GigKompassen.Services
       if (artist == null)
         return false;
 
-      var genreToRemove = artist.Genres.FirstOrDefault(g => genreName.Equals(genreName, StringComparison.OrdinalIgnoreCase));
+      var genreToRemove = artist.Genres.FirstOrDefault(g => g.Name.Equals(genreName));
       if(genreToRemove == null)
         return false;
 
@@ -89,7 +99,7 @@ namespace GigKompassen.Services
       if (scene == null)
         return false;
 
-      var genreToRemove = scene.Genres.FirstOrDefault(g => g.Name.Equals(genreName, StringComparison.OrdinalIgnoreCase));
+      var genreToRemove = scene.Genres.FirstOrDefault(g => g.Name.Equals(genreName));
       if (genreToRemove == null)
         return false;
 

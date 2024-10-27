@@ -1,4 +1,4 @@
-using GigKompassen.Authorization.Identity;
+
 using GigKompassen.Dto.Profiles;
 using GigKompassen.Models.Accounts;
 using GigKompassen.Models.Media;
@@ -25,15 +25,13 @@ namespace GigKompassen.Web.Areas.Identity.Pages.Account
     private readonly ArtistService _artistService;
     private readonly ManagerProfileService _managementService;
     private readonly SceneProfileService _sceneService;
-    private readonly IdentityProfileService _identityService;
 
-    public CompleteProfileModel(UserManager<ApplicationUser> userManager, ArtistService artistService, ManagerProfileService managementService, SceneProfileService sceneService, IdentityProfileService identityService)
+    public CompleteProfileModel(UserManager<ApplicationUser> userManager, ArtistService artistService, ManagerProfileService managementService, SceneProfileService sceneService)
     {
       _userManager = userManager;
       _artistService = artistService;
       _managementService = managementService;
       _sceneService = sceneService;
-      _identityService = identityService;
     }
 
     [BindProperty]
@@ -138,8 +136,7 @@ namespace GigKompassen.Web.Areas.Identity.Pages.Account
           // Save Artist Group Profile
           // Implement logic to create and associate an ArtistProfile with the user
           ArtistProfileDto artistProfile = FromViewModel(ArtistProfile);
-          var profile = await _artistService.CreateAsync(artistProfile);
-          await _identityService.AddUserToProfileAsync(user, new ProfileIdentity(profile.Id, ProfileTypeEnum.Artist));
+          var profile = await _artistService.CreateAsync(user.Id, artistProfile);
         }
         else if (role == "Scene")
         {
@@ -147,7 +144,7 @@ namespace GigKompassen.Web.Areas.Identity.Pages.Account
           // Implement logic to create and associate a SceneProfile with the user
           SceneProfileDto sceneProfile = FromViewModel(SceneProfile);
 
-          await _sceneService.CreateAsync(sceneProfile);
+          await _sceneService.CreateAsync(user.Id, sceneProfile);
         }
         else if (role == "Manager")
         {
@@ -155,7 +152,7 @@ namespace GigKompassen.Web.Areas.Identity.Pages.Account
           // Implement logic to create and associate a ManagementProfile with the user
           ManagerProfileDto managementProfile = FromViewModel(ManagerProfile);
 
-          await _managementService.CreateAsync(managementProfile);
+          await _managementService.CreateAsync(user.Id, managementProfile);
         }
 
         var result = await _userManager.UpdateAsync(user);
@@ -195,13 +192,11 @@ namespace GigKompassen.Web.Areas.Identity.Pages.Account
       return profile;
     }
 
-
-
     private SceneProfileDto FromViewModel(CreateSceneProfileViewModel viewModel)
     {
       SceneProfileDto profile = new()
       {
-        VenueName = viewModel.VenueName,
+        Name = viewModel.VenueName,
         Address = viewModel.Address,
         VenueType = viewModel.VenueType,
         ContactInfo = viewModel.ContactInfo,

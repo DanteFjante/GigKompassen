@@ -45,21 +45,28 @@ namespace GigKompassen.Services
       return sceneProfiles;
     }
 
-    public async Task<SceneProfile?> CreateAsync(SceneProfileDto dto)
+    public async Task<SceneProfile?> CreateAsync(Guid userId, SceneProfileDto dto)
     {
       if (dto == null)
         throw new ArgumentNullException(nameof(dto));
 
-      if (string.IsNullOrEmpty(dto.VenueName))
+      if (string.IsNullOrEmpty(dto.Name))
       {
         throw new ArgumentException("Venue name is required");
       }
 
-      SceneProfile profile = await FromDtoAsync(dto);
+      var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+      if (user == null)
+        throw new KeyNotFoundException("User not found");
 
+      SceneProfile profile = await FromDtoAsync(dto);
+      profile.Owner = user;
+      profile.OwnerId = user.Id;
       var ret = (await _context.SceneProfiles.AddAsync(profile)).Entity;
+      user.OwnedProfiles?.Add(profile);
       await _context.SaveChangesAsync();
-      var galleryOwner = await _mediaService.CreateGalleryAsync(profile);
+
+      var galleryOwner = await _mediaService.CreateGalleryOwnerAsync(profile);
       ret.GalleryOwner = galleryOwner;
       return ret;
     }
@@ -71,7 +78,7 @@ namespace GigKompassen.Services
       if (profile == null)
         throw new KeyNotFoundException("Profile not found");
 
-      profile.Name = dto.VenueName ?? profile.Name;
+      profile.Name = dto.Name ?? profile.Name;
       profile.Address = dto.Address ?? profile.Address;
       profile.VenueType = dto.VenueType ?? profile.VenueType;
       profile.ContactInfo = dto.ContactInfo ?? profile.ContactInfo;
@@ -124,8 +131,8 @@ namespace GigKompassen.Services
       if (dto == null)
         throw new ArgumentNullException(nameof(dto));
 
-      if (string.IsNullOrWhiteSpace(dto.VenueName))
-        throw new ArgumentException("Name is required.", nameof(dto.VenueName));
+      if (string.IsNullOrWhiteSpace(dto.Name))
+        throw new ArgumentException("Name is required.", nameof(dto.Name));
 
       Guid sceneId = dto.Id.HasValue ? dto.Id.Value : Guid.NewGuid();
 
@@ -139,7 +146,7 @@ namespace GigKompassen.Services
       var profile = new SceneProfile
       {
         Id = sceneId,
-        Name = dto.VenueName!,
+        Name = dto.Name!,
         Address = dto.Address ?? string.Empty,
         VenueType = dto.VenueType ?? string.Empty,
         ContactInfo = dto.ContactInfo ?? string.Empty,

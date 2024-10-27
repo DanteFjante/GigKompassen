@@ -6,7 +6,7 @@ namespace GigKompassen.Dto.Profiles
   public class SceneProfileDto
   {
     public Guid? Id { get; set; }
-    public string? VenueName { get; set; }
+    public string? Name { get; set; }
     public string? Address { get; set; }
     public string? VenueType { get; set; }
     public string? ContactInfo { get; set; }

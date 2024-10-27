@@ -20,10 +20,10 @@ namespace GigKompassen.Services
       _genreService = genreService;
     }
 
-    public async Task<ICollection<ArtistProfile>> GetAllAsync(ArtistProfileQueryOptions? options = null)
+    public async Task<List<ArtistProfile>> GetAllAsync(ArtistProfileQueryOptions? options = null)
     {
 
-      var query = _context.ArtistProfiles.AsQueryable();
+      var query = _context.ArtistProfiles.IgnoreAutoIncludes().AsQueryable();
 
       if (options != null)
       {
@@ -54,7 +54,7 @@ namespace GigKompassen.Services
       return artistProfile;
     }
 
-    public async Task<ArtistProfile> CreateAsync(ArtistProfileDto artistProfileDto)
+    public async Task<ArtistProfile> CreateAsync(Guid userId, ArtistProfileDto artistProfileDto)
     {
       if (artistProfileDto == null)
         throw new ArgumentNullException(nameof(artistProfileDto));
@@ -62,15 +62,21 @@ namespace GigKompassen.Services
       if (string.IsNullOrWhiteSpace(artistProfileDto.Name))
         throw new ArgumentException("Name is required.", nameof(artistProfileDto.Name));
 
+      var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+
+      if (user == null)
+        throw new KeyNotFoundException("User not found");
+
       var profile = await FromDtoAsync(artistProfileDto);
+      profile.OwnerId = userId;
+      profile.Owner = user;
       await _context.ArtistProfiles.AddAsync(profile);
+      user.OwnedProfiles?.Add(profile);
       await _context.SaveChangesAsync();
-      var galleryOwner = await _mediaService.CreateGalleryAsync(profile);
+      var galleryOwner = await _mediaService.CreateGalleryOwnerAsync(profile);
       profile.GalleryOwner = galleryOwner;
       return profile;
     }
-
-
 
     public async Task<ArtistProfile> UpdateAsync(Guid id, ArtistProfileDto artistProfileDto)
     {
@@ -99,12 +105,14 @@ namespace GigKompassen.Services
         var genreNames = artistProfileDto.Genres.Select(g => g.Name).ToList();
 
         var genresToRemove = profile.Genres.Where(g => !genreNames.Contains(g.Name)).ToList();
-        var genresToAdd = await _genreService.AddOrGetGenresAsync(genreNames.Where(g => !profile.Genres.Any(g => g.Name == g.Name)));
+        var genresToAdd = await _genreService.AddOrGetGenresAsync(genreNames.Except(profile.Genres.Select(p => p.Name)));
+        
         
         foreach(var genre in genresToRemove)
         {
           profile.Genres.Remove(genre);
         }
+        
         foreach (var genre in genresToAdd)
         {
           profile.Genres.Add(genre);
@@ -134,11 +142,13 @@ namespace GigKompassen.Services
           _context.ArtistMembers.Add(member);
         }
 
+        
         foreach (var member in toRemove)
         {
           profile.Members.Remove(member);
           _context.ArtistMembers.Remove(member);
         }
+        
       }
 
       await _context.SaveChangesAsync();
@@ -198,7 +208,7 @@ namespace GigKompassen.Services
 
     public async Task<bool> UpdateMember(Guid memberId, ArtistMemberDto member)
     {
-      var existingMember = await _context.ArtistMembers.AsTracking().FirstOrDefaultAsync(m => m.Id == memberId);
+      var existingMember = await _context.ArtistMembers.FirstOrDefaultAsync(m => m.Id == memberId);
       if (existingMember == null)
         return false;
 
@@ -212,7 +222,6 @@ namespace GigKompassen.Services
       return true;
     }
     #endregion
-
 
     private async Task<ArtistProfile> FromDtoAsync(ArtistProfileDto dto)
     {

@@ -1,6 +1,5 @@
 ﻿using GigKompassen.Data;
 using GigKompassen.Dto.Media;
-using GigKompassen.Models.Accounts;
 using GigKompassen.Models.Chats;
 using GigKompassen.Models.Media;
 using GigKompassen.Models.Profiles;
@@ -19,50 +18,86 @@ namespace GigKompassen.Services
       _context = context;
     }
 
-    public async Task<MediaGalleryOwner> CreateGalleryAsync(ArtistProfile owner)
+    #region Get
+    public async Task<MediaGallery?> GetGalleryAsync(Guid galleryId)
     {
-      return await CreateGalleryAsync<ArtistProfile>(owner);
+      var gallery = await _context.MediaGalleries
+          .Include(g => g.Items)
+          .Include(g => g.Owner)
+          .FirstOrDefaultAsync(g => g.Id == galleryId);
+
+      return gallery;
     }
 
-    public async Task<MediaGalleryOwner> CreateGalleryAsync(SceneProfile owner)
+    public async Task<MediaItem?> GetMediaItemAsync(Guid itemId)
     {
-      return await CreateGalleryAsync<SceneProfile>(owner);
+      var item = await _context.MediaItems
+          .Include(mi => mi.Link)
+          .FirstOrDefaultAsync(mi => mi.Id == itemId);
+
+      return item;
     }
 
-    public async Task<MediaGalleryOwner> CreateGalleryAsync(Chat owner)
+    public async Task<MediaLink?> GetMediaLinkAsync(Guid linkId)
     {
-      return await CreateGalleryAsync<Chat>(owner);
+      var link = await _context.MediaLinks
+          .FirstOrDefaultAsync(ml => ml.Id == linkId);
+
+      return link;
+    }
+    #endregion
+
+    #region Create
+    public async Task<MediaGalleryOwner> CreateGalleryOwnerAsync(ArtistProfile owner)
+    {
+      return await CreateGalleryOwnerAsync(owner, null, null);
     }
 
-    private async Task<MediaGalleryOwner> CreateGalleryAsync<T>(T owner) where T : class
+    public async Task<MediaGalleryOwner> CreateGalleryOwnerAsync(SceneProfile owner)
+    {
+      return await CreateGalleryOwnerAsync(null, owner, null);
+    }
+
+    public async Task<MediaGalleryOwner> CreateGalleryOwnerAsync(Chat owner)
+    {
+      return await CreateGalleryOwnerAsync(null, null, owner);
+    }
+
+    private async Task<MediaGalleryOwner> CreateGalleryOwnerAsync(ArtistProfile? artist, SceneProfile? scene, Chat? chat)
     {
       var gallery = await CreateGalleryAsync();
       MediaGalleryOwner galleryOwner = new MediaGalleryOwner()
       {
         Id = Guid.NewGuid(),
         Gallery = gallery,
-        
-
       };
-
-      if(owner is ArtistProfile artist)
+      bool hasOwner = false;
+      if(artist != null)
       {
+        hasOwner = true;
         galleryOwner.ArtistProfile = artist;
         galleryOwner.ArtistProfileId = artist.Id;
       }
-      else if (owner is SceneProfile scene)
+
+      if (scene != null)
       {
+        if (hasOwner)
+          throw new InvalidOperationException("Only one owner type can be set");
+        hasOwner = true;
         galleryOwner.SceneProfile = scene;
         galleryOwner.SceneProfileId = scene.Id;
       }
-      else if (owner is Chat chat)
+      if (chat != null)
       {
+        if (hasOwner)
+          throw new InvalidOperationException("Only one owner type can be set");
+        hasOwner = true;
         galleryOwner.Chat = chat;
         galleryOwner.ChatId = chat.Id;
       }
-      else
+      if(!hasOwner)
       {
-        throw new InvalidOperationException("Unsupported owner type.");
+        throw new InvalidOperationException("Gallery needs an owner specified");
       }
 
       var ret = (await _context.MediaGalleryOwners.AddAsync(galleryOwner)).Entity;
@@ -82,7 +117,7 @@ namespace GigKompassen.Services
       return ret;
     }
 
-    public async Task<MediaItem> CreateItemAsync(Guid galleryId, Guid linkId, MediaItemDto itemDto)
+    public async Task<MediaItem> CreateMediaItemAsync(Guid galleryId, Guid linkId, MediaItemDto itemDto)
     {
       if (itemDto == null)
         throw new ArgumentNullException(nameof(itemDto));
@@ -110,7 +145,7 @@ namespace GigKompassen.Services
       return mediaItem;
     }
 
-    public async Task<MediaLink> CreateLinkAsync(Guid uploaderId, MediaLinkDto linkDto)
+    public async Task<MediaLink> CreateMediaLinkAsync(Guid uploaderId, MediaLinkDto linkDto)
     {
       if (linkDto == null)
         throw new ArgumentNullException(nameof(linkDto));
@@ -135,48 +170,15 @@ namespace GigKompassen.Services
 
       return mediaLink;
     }
+    #endregion
 
-    public async Task<MediaGallery> GetGalleryAsync(Guid galleryId)
-    {
-      var gallery = await _context.MediaGalleries
-          .Include(g => g.Items)
-          .FirstOrDefaultAsync(g => g.Id == galleryId);
-
-      if (gallery == null)
-        throw new KeyNotFoundException("MediaGallery not found");
-
-      return gallery;
-    }
-
-    public async Task<MediaItem> GetMediaItemAsync(Guid itemId)
-    {
-      var item = await _context.MediaItems
-          .Include(mi => mi.Link)
-          .FirstOrDefaultAsync(mi => mi.Id == itemId);
-
-      if (item == null)
-        throw new KeyNotFoundException("MediaItem not found");
-
-      return item;
-    }
-
-    public async Task<MediaLink> GetMediaLinkAsync(Guid linkId)
-    {
-      var link = await _context.MediaLinks
-          .FirstOrDefaultAsync(ml => ml.Id == linkId);
-
-      if (link == null)
-        throw new KeyNotFoundException("MediaLink not found");
-
-      return link;
-    }
-
+    #region Update
     public async Task<MediaItem> UpdateMediaItemAsync(Guid itemId, MediaItemDto itemDto)
     {
       if (itemDto == null)
         throw new ArgumentNullException(nameof(itemDto));
 
-      var item = await _context.MediaItems.FindAsync(itemId);
+      var item = await _context.MediaItems.FirstOrDefaultAsync(p => p.Id == itemId);
       if (item == null)
         throw new KeyNotFoundException("MediaItem not found");
 
@@ -187,41 +189,66 @@ namespace GigKompassen.Services
 
       return item;
     }
+    #endregion
 
-    public async Task<MediaLink> UpdateMediaLinkAsync(Guid linkId, MediaLinkDto linkDto)
+    #region Delete
+    public async Task<bool> DeleteGalleryOwnerAsync(Guid galleryOwnerId)
     {
-      if (linkDto == null)
-        throw new ArgumentNullException(nameof(linkDto));
+      var galleryOwner = await _context.MediaGalleryOwners.Include(p => p.Gallery).FirstOrDefaultAsync(p => p.Id == galleryOwnerId);
+      if (galleryOwner == null)
+        return false;
 
-      var link = await _context.MediaLinks.FindAsync(linkId);
-      if (link == null)
-        throw new KeyNotFoundException("MediaLink not found");
+      var gallery = galleryOwner.Gallery;
+      if (gallery != null)
+      {
+        var items = gallery.Items.ToList();
+        if (items != null)
+        {
+          var links = gallery.Items.Select(i => i.Link).ToList();
+          if (links != null)
+          {
+            _context.MediaLinks.RemoveRange(links);
+          }
+          _context.MediaItems.RemoveRange(items);
+        }
+        _context.MediaGalleries.Remove(gallery);
+      }
 
-      link.Path = linkDto.Path ?? link.Path;
-      link.MediaType = linkDto.MediaType;
-
+      _context.MediaGalleryOwners.Remove(galleryOwner);
       await _context.SaveChangesAsync();
-
-      return link;
+      return true;
     }
 
     public async Task<bool> DeleteGalleryAsync(Guid galleryId)
     {
-      var gallery = await _context.MediaGalleries.FindAsync(galleryId);
+      var gallery = await _context.MediaGalleries.FirstOrDefaultAsync(p => p.Id == galleryId);
       if (gallery == null)
         return false;
 
+      var items = gallery.Items.ToList();
+      if (items != null)
+      {
+        var links = items.Select(i => i.Link).ToList();
+        if (links != null)
+        {
+          _context.MediaLinks.RemoveRange(links);
+        }
+        _context.MediaItems.RemoveRange(items);
+      }
       _context.MediaGalleries.Remove(gallery);
       await _context.SaveChangesAsync();
-
       return true;
     }
 
     public async Task<bool> DeleteMediaItemAsync(Guid itemId)
     {
-      var item = await _context.MediaItems.FindAsync(itemId);
+      var item = await _context.MediaItems.FirstOrDefaultAsync(p => p.Id == itemId);
       if (item == null)
         return false;
+
+
+      if (item.Link != null)
+        _context.MediaLinks.Remove(item.Link);
 
       _context.MediaItems.Remove(item);
       await _context.SaveChangesAsync();
@@ -240,5 +267,6 @@ namespace GigKompassen.Services
 
       return true;
     }
+    #endregion
   }
 }
