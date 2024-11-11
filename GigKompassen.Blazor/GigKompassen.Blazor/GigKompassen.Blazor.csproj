@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>aspnet-GigKompassen.Blazor-4c5ad8a8-d0b8-4ccb-a90d-df19a5539213</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Components\Account\Pages\Disabled\Login.razor.old" />
+    <None Remove="Components\Account\Pages\Disabled\Register.razor.old" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Components\Account\Pages\Disabled\Login.razor.old" />
+    <Content Include="Components\Account\Pages\Disabled\Register.razor.old" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\GigKompassen\GigKompassen.csproj" />
+    <ProjectReference Include="..\GigKompassen.Blazor.Client\GigKompassen.Blazor.Client.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.10">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,94 @@
+﻿@using System.ComponentModel.DataAnnotations
+
+<div class="row">
+	<div class="col-md-12">
+		<StatusMessage Message="@Message"/>
+    <EditForm Model="Input" OnValidSubmit="SumbitProfile" FormName="CompleteRegistration">
+      <DataAnnotationsValidator />
+      <h3>Complete your profile</h3>
+      <hr />
+      <ValidationSummary class="text-danger" role="alert" />
+      <div class="form-floating mb-3">
+        <InputText @bind-Value="Input.FirstName" class="form-control" autocomplete="firstname" aria-required="true" placeholder="First Name" />
+        <label for="Input.FirstName" class="form-label">First Name</label>
+        <ValidationMessage For="() => Input.FirstName" class="text-danger" />
+      </div>
+
+      <div class="form-floating mb-3">
+        <InputText @bind-Value="Input.LastName" class="form-control" autocomplete="lastname" aria-required="true" placeholder="Last Name" />
+        <label for="Input.LastName" class="form-label">Last Name</label>
+        <ValidationMessage For="() => Input.LastName" class="text-danger" />
+      </div>
+
+      @* Add additional fields based on the user's role *@
+      <!-- Profile Type Selection -->
+      <div class="form-floating mb-3">
+        <InputSelect class="form-control" @bind-Value="Input.ProfileTypeSelection">
+          <option value="">Select Profile Type</option>
+          @foreach (var type in Enum.GetValues<ProfileType>())
+          {
+            <option value="@type">@type</option>
+          }
+        </InputSelect>
+        <label>Profile Type</label>
+        <ValidationMessage For="() => Input.ProfileTypeSelection" class="text-danger" />
+      </div>
+
+      <hr />
+      <!-- Conditional Fields Based on ProfileTypeSelection -->
+      @if (Input.ProfileTypeSelection == ProfileType.Artist)
+      {
+        <div class="form-floating mb-3">
+          <label>Artist Field</label>
+        </div>
+      }
+      else if (Input.ProfileTypeSelection == ProfileType.Scene)
+      {
+        <div class="form-floating mb-3">
+          <label>Scene Field</label>
+        </div>
+      }
+      else if (Input.ProfileTypeSelection == ProfileType.Manager)
+      {
+        <div class="form-floating mb-3">
+          <label>Manager Field</label>
+        </div>
+      }
+      <hr />
+      <button type="submit" class="w-100 btn btn-lg btn-primary">Complete Registration</button>
+    </EditForm>
+
+	</div>
+</div>
+
+@code {
+  public string? Message { get; set; }
+  public InputModel Input { get; set; } = new InputModel();
+
+
+  public async Task SumbitProfile()
+  {
+
+  }
+
+
+  public enum ProfileType {
+    Artist,
+    Scene,
+    Manager
+  }
+
+  public class InputModel
+  {
+    [Required]
+    [Display(Name = "First Name")]
+    public string FirstName { get; set; } = "";
+    [Required]
+    [Display(Name = "Last Name")]
+    public string LastName { get; set; } = "";
+
+    [Required(ErrorMessage = "Please select a profile type.")]
+    [Display(Name = "Profile Type")]
+    public ProfileType? ProfileTypeSelection { get; set; }
+  }
+}
