@@ -1,251 +1,148 @@
-﻿using GigKompassen.Enums;
+﻿using GigKompassen.Data;
+using GigKompassen.Enums;
 using GigKompassen.Services;
 using GigKompassen.Test.Helpers;
 
 using Microsoft.EntityFrameworkCore;
+using static GigKompassen.Test.Helpers.BogusRepositories;
+using static GigKompassen.Test.Helpers.DbContextHelper;
 
 namespace GigKompassen.Test.Tests.Services
 {
   public class ProfileAccessServiceTests
   {
 
-    public ProfileAccessServiceTests() { }
+    private readonly ApplicationDbContext _context;
+    private readonly ProfileAccessService _profileAccessService;
+    private readonly FakeDataHelper f;
+
+    public ProfileAccessServiceTests() 
+    {
+
+      _context = GetInMemoryDbContext();
+      UserService userService = new UserService(_context, GetMockedUserManager(_context));
+      GenreService genreService = new GenreService(_context);
+      MediaService mediaService = new MediaService(_context, userService);
+      ArtistService artistService = new ArtistService(_context, userService, genreService, mediaService);
+      SceneService sceneService = new SceneService(_context, userService, genreService, mediaService);
+      ManagerService managerService = new ManagerService(_context, userService, mediaService);
+
+      _profileAccessService = new ProfileAccessService(_context, userService, artistService, sceneService, managerService);
+
+      f = new FakeDataHelper(_context);
+    }
 
     [Fact]
     public async Task CanCheckIfAuthExists()
     {
+      var user = f.AddFakeUser()!;
+      var user2 = f.AddFakeUser()!;
+      var artist = f.AddFakeArtistProfile(user.Id)!;
+      artist.Public = true;
+      var auth = f.AddFakeProfileAccess(user2.Id, artist.Id, AccessType.Edit)!;
 
-      // Arrange
-      var context = DbContextHelper.GetInMemoryDbContext();
-      var service = new ProfileAccessService(context);
-      var repo = new TestEntityRepository();
+      var result1 = await _profileAccessService.CanAccessProfileAsync(user2.Id, artist.Id, AccessType.Edit);
+      var result2 = await _profileAccessService.CanAccessProfileAsync(user2.Id, artist.Id, AccessType.View);
+      artist.Public = false;
+      var result3 = await _profileAccessService.CanAccessProfileAsync(user2.Id, artist.Id, AccessType.View);
+      var result4 = await _profileAccessService.CanAccessProfileAsync(user2.Id, artist.Id, AccessType.Represent);
 
-      var user1 = repo.NewUser();
-      var user2 = repo.NewUser();
-      var openProfile = repo.NewArtistProfile();
-      var closedProfile = repo.NewArtistProfile();
-      closedProfile.Public = false;
-
-      var access1 = repo.GetProfileAccess(Guid.NewGuid(), user1, openProfile);
-      access1.AccessType = AccessType.Delete;
-      
-      var access2 = repo.GetProfileAccess(Guid.NewGuid(), user1, closedProfile);
-      access2.AccessType = AccessType.Delete;
-      
-      var access3 = repo.GetProfileAccess(Guid.NewGuid(), user2, closedProfile);
-      access3.AccessType = AccessType.View;
-
-      // Act
-      context.Users.Add(user1);
-      context.Users.Add(user2);
-      context.Profiles.Add(openProfile);
-      context.Profiles.Add(closedProfile);
-      context.ProfileAccesses.Add(access1);
-      context.ProfileAccesses.Add(access2);
-      context.ProfileAccesses.Add(access3);
-      context.SaveChanges();
-
-
-      bool result01 = await service.CanAccessProfile(openProfile.Id, user1.Id, AccessType.Delete);
-      bool result02 = await service.CanAccessProfile(openProfile.Id, user1.Id, AccessType.View);
-      bool result03 = await service.CanAccessProfile(openProfile.Id, user1.Id, AccessType.Edit);
-
-      bool result04 = await service.CanAccessProfile(openProfile.Id, user2.Id, AccessType.Delete);
-      bool result05 = await service.CanAccessProfile(openProfile.Id, user2.Id, AccessType.View);
-      bool result06 = await service.CanAccessProfile(openProfile.Id, user2.Id, AccessType.Edit);
-
-      bool result07 = await service.CanAccessProfile(closedProfile.Id, user1.Id, AccessType.Delete);
-      bool result08 = await service.CanAccessProfile(closedProfile.Id, user1.Id, AccessType.View);
-      bool result09 = await service.CanAccessProfile(closedProfile.Id, user1.Id, AccessType.Edit);
-
-      bool result10 = await service.CanAccessProfile(closedProfile.Id, user2.Id, AccessType.Delete);
-      bool result11 = await service.CanAccessProfile(closedProfile.Id, user2.Id, AccessType.View);
-      bool result12 = await service.CanAccessProfile(closedProfile.Id, user2.Id, AccessType.Edit);
-
-      // Assert
-      Assert.True(result01);
-      Assert.True(result02);
-      Assert.False(result03);
-
-      Assert.False(result04);
-      Assert.True(result05);
-      Assert.False(result06);
-
-      Assert.True(result07);
-      Assert.False(result08);
-      Assert.False(result09);
-
-      Assert.False(result10);
-      Assert.True(result11);
-      Assert.False(result12);
-
-
+      Assert.True(result1);
+      Assert.True(result2);
+      Assert.False(result3);
+      Assert.False(result3);
     }
 
     [Fact]
     public async Task CanAddAuth()
     {
-      // Arrange
-      var context = DbContextHelper.GetInMemoryDbContext();
-      var service = new ProfileAccessService(context);
-      var repo = new TestEntityRepository();
-      var user = repo.NewUser();
-      var profile = repo.NewArtistProfile();
+      var user = f.AddFakeUser()!;
+      var artist = f.AddFakeArtistProfile(user.Id)!;
 
-      // Act
-      context.Users.Add(user);
-      context.Profiles.Add(profile);
-      context.SaveChanges();
-      var result = await service.AddProfileAuthorization(profile.Id, user.Id, Enums.AccessType.Delete);
+      var auth = await _profileAccessService.AddProfileAuthorizationAsync(user.Id, artist.Id, AccessType.Edit);
 
-      // Assert
-      Assert.True(result);
+      var auths = await _context.ProfileAccesses.Where(pa => pa.ProfileId == artist.Id && pa.UserId == user.Id).ToListAsync();
 
+      Assert.Single(auths);
+      Assert.Equal(AccessType.Edit, auths[0].AccessType);
     }
 
     [Fact]
     public async Task CanRemoveAuth()
     {
-      // Arrange
-      var context = DbContextHelper.GetInMemoryDbContext();
-      var service = new ProfileAccessService(context);
-      var repo = new TestEntityRepository();
-      var user = repo.NewUser();
-      var profile = repo.NewArtistProfile();
-      var access = repo.GetProfileAccess(Guid.NewGuid(), user, profile);
-      // Act
-      context.Users.Add(user);
-      context.Profiles.Add(profile);
-      context.ProfileAccesses.Add(access);
-      context.SaveChanges();
-      var result = await service.RemoveAuthorization(profile, user);
-      // Assert
-      Assert.True(result);
-    }
+      var user = f.AddFakeUser()!;
+      var artist = f.AddFakeArtistProfile(user.Id)!;
+      var scene = f.AddFakeArtistProfile(user.Id)!;
+      var auth1 = f.AddFakeProfileAccess(user.Id, artist.Id, AccessType.Edit)!;
+      var auth2 = f.AddFakeProfileAccess(user.Id, artist.Id, AccessType.View)!;
+      var auth3 = f.AddFakeProfileAccess(user.Id, artist.Id, AccessType.Represent)!;
+      var auth4 = f.AddFakeProfileAccess(user.Id, scene.Id, AccessType.Represent)!;
 
-    [Fact]
-    public async Task CanRemoveAuthByType()
-    {
-      // Arrange
-      var context = DbContextHelper.GetInMemoryDbContext();
-      var service = new ProfileAccessService(context);
-      var repo = new TestEntityRepository();
-      var user = repo.NewUser();
-      var profile = repo.NewArtistProfile();
-      var access = repo.GetProfileAccess(Guid.NewGuid(), user, profile);
-      access.AccessType = AccessType.Delete;
-      // Act
-      context.Users.Add(user);
-      context.Profiles.Add(profile);
-      context.ProfileAccesses.Add(access);
-      context.SaveChanges();
-      var result = await service.RemoveAuthorization(profile, user, AccessType.Delete);
-      // Assert
-      Assert.True(result);
-    }
+      var result1 = await _profileAccessService.RemoveAuthorizationAsync(user.Id, artist.Id, AccessType.Edit);
+      var auth1and2Ids = await _context.ProfileAccesses.Where(pa => pa.ProfileId == artist.Id && pa.UserId == user.Id).Select(pa => pa.Id).ToListAsync();
+      var result2 = await _profileAccessService.RemoveAuthorizationAsync(user.Id, scene.Id);
+      var result3 = await _profileAccessService.RemoveAuthorizationAsync(auth3.Id);
 
-    [Fact]
-    public async Task CanRemoveAuthById()
-    {
-      // Arrange
-      var context = DbContextHelper.GetInMemoryDbContext();
-      var service = new ProfileAccessService(context);
-      var repo = new TestEntityRepository();
-      var user = repo.NewUser();
-      var profile = repo.NewArtistProfile();
-      var access = repo.GetProfileAccess(Guid.NewGuid(), user, profile);
-      // Act
-      context.Users.Add(user);
-      context.Profiles.Add(profile);
-      context.ProfileAccesses.Add(access);
-      context.SaveChanges();
-      var result = await service.RemoveAuthorization(access.Id);
-      // Assert
-      Assert.True(result);
+      var auths = await _context.ProfileAccesses.Where(pa => pa.ProfileId == artist.Id && pa.UserId == user.Id).ToListAsync();
+
+      Assert.True(result1);
+      Assert.Equal(2, auth1and2Ids.Count());
+      Assert.True(result2);
+      Assert.True(result3);
+      Assert.Single(auths);
+      Assert.Equal(AccessType.View, auths[0].AccessType);
     }
 
     [Fact]
     public async Task CanClearAuthFromProfile()
     {
-      // Arrange
-      var context = DbContextHelper.GetInMemoryDbContext();
-      var service = new ProfileAccessService(context);
-      var repo = new TestEntityRepository();
-      var user = repo.NewUser();
-      var profile = repo.NewArtistProfile();
-      var access1 = repo.GetProfileAccess(Guid.NewGuid(), user, profile);
-      access1.AccessType = AccessType.Delete;
-      var access2 = repo.GetProfileAccess(Guid.NewGuid(), user, profile);
-      access2.AccessType = AccessType.View;
-      // Act
-      context.Users.Add(user);
-      context.Profiles.Add(profile);
-      context.ProfileAccesses.Add(access1);
-      context.ProfileAccesses.Add(access2);
-      context.SaveChanges();
-      var result = await service.ClearAuthorizations(profile);
-      // Assert
+      var user = f.AddFakeUser()!;
+      var user2 = f.AddFakeUser()!;
+      var artist = f.AddFakeArtistProfile(user.Id)!;
+      var auth1 = f.AddFakeProfileAccess(user.Id, artist.Id, AccessType.Edit)!;
+      var auth2 = f.AddFakeProfileAccess(user.Id, artist.Id, AccessType.View)!;
+      var auth3 = f.AddFakeProfileAccess(user.Id, artist.Id, AccessType.Represent)!;
+      var auth4 = f.AddFakeProfileAccess(user2.Id, artist.Id, AccessType.Represent)!;
+
+      var result = await _profileAccessService.ClearAuthorizationsFromProfileAsync(artist.Id);
+      var auths = await _context.ProfileAccesses.ToListAsync();
+
       Assert.True(result);
-      Assert.Empty(context.ProfileAccesses);
+      Assert.Empty(auths);
     }
 
     [Fact]
     public async Task CanClearAuthFromUser()
     {
-      // Arrange
-      var context = DbContextHelper.GetInMemoryDbContext();
-      var service = new ProfileAccessService(context);
-      var repo = new TestEntityRepository();
-      var user = repo.NewUser();
-      var profile = repo.NewArtistProfile();
-      var access1 = repo.GetProfileAccess(Guid.NewGuid(), user, profile);
-      access1.AccessType = AccessType.Delete;
-      var access2 = repo.GetProfileAccess(Guid.NewGuid(), user, profile);
-      access2.AccessType = AccessType.View;
-      // Act
-      context.Users.Add(user);
-      context.Profiles.Add(profile);
-      context.ProfileAccesses.Add(access1);
-      context.ProfileAccesses.Add(access2);
-      context.SaveChanges();
-      var result = await service.ClearAuthorizations(user);
-      // Assert
+      var user = f.AddFakeUser()!;
+      var user2 = f.AddFakeUser()!;
+      var artist = f.AddFakeArtistProfile(user.Id)!;
+      var artist2 = f.AddFakeArtistProfile(user.Id)!;
+      var auth1 = f.AddFakeProfileAccess(user.Id, artist.Id, AccessType.Edit)!;
+      var auth2 = f.AddFakeProfileAccess(user2.Id, artist.Id, AccessType.View)!;
+      var auth3 = f.AddFakeProfileAccess(user.Id, artist2.Id, AccessType.Represent)!;
+      var auth4 = f.AddFakeProfileAccess(user2.Id, artist2.Id, AccessType.Represent)!;
+
+      var result = await _profileAccessService.ClearAuthorizationsFromUserAsync(user.Id);
+      var auths = await _context.ProfileAccesses.ToListAsync();
+
+
       Assert.True(result);
-      Assert.Empty(context.ProfileAccesses);
+      Assert.Equal(2, auths.Count());
+      Assert.DoesNotContain(auths, a => a.UserId == user.Id);
     } 
 
     [Fact]
     public async Task CanSetOwner()
     {
-      // Arrange
-      var context = DbContextHelper.GetInMemoryDbContext();
-      var service = new ProfileAccessService(context);
-      var repo = new TestEntityRepository();
-      var olduser = repo.NewUser();
-      var newuser = repo.NewUser();
-      var profile = repo.NewArtistProfile();
+      var user = f.AddFakeUser()!;
+      var artist = f.AddFakeArtistProfile(user.Id)!;
+      var user2 = f.AddFakeUser()!;
+      var result = await _profileAccessService.SetProfileOwnerAsync(user2.Id, artist.Id);
+      var profile = await _context.ArtistProfiles.Where(ap => ap.Id == artist.Id).FirstOrDefaultAsync();
 
-      // Act
-      context.Users.Add(olduser);
-      context.Users.Add(newuser);
-      context.Profiles.Add(profile);
-      context.SaveChanges();
-
-      var result = await service.SetProfileOwner(profile, newuser);
-      var retrievedProfile = await context.Profiles.FirstOrDefaultAsync(p => p.Id == profile.Id);
-      var retrievedOldUser = await context.Users.Include(p => p.OwnedProfiles).FirstOrDefaultAsync(u => u.Id == olduser.Id);
-      var retrievedUser = retrievedProfile?.Owner;
-
-      // Assert
-      Assert.NotNull(retrievedProfile);
-      Assert.NotNull(retrievedUser);
-      Assert.NotNull(retrievedOldUser);
-      Assert.NotNull(retrievedOldUser.OwnedProfiles);
       Assert.True(result);
-      Assert.Equal(newuser.Id, retrievedUser.Id);
-      Assert.Empty(retrievedOldUser.OwnedProfiles);
-
-
+      Assert.Equal(user2.Id, profile.OwnerId);
     }
   }
 }

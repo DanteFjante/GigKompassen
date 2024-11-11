@@ -1,145 +1,149 @@
-﻿using GigKompassen.Models.Profiles;
+﻿using GigKompassen.Data;
+using GigKompassen.Models.Profiles;
 using GigKompassen.Services;
 using GigKompassen.Test.Helpers;
 
 using Microsoft.EntityFrameworkCore;
 
 using static GigKompassen.Test.Helpers.DbContextHelper;
+using static GigKompassen.Test.Helpers.BogusRepositories;
 
 namespace GigKompassen.Test.Tests.Services
 {
   public class GenreServiceTests
   {
+
+    private readonly GenreService _genreService;
+    private readonly ApplicationDbContext _context;
+
+    private readonly FakeDataHelper f;
+
+    public GenreServiceTests()
+    {
+      _context = GetInMemoryDbContext();
+      _genreService = new GenreService(_context);
+
+      f = new FakeDataHelper(_context);
+    }
+
     [Fact]
     public async Task CanCheckIfGenreExists()
     {
-      // Arrange
-      var context = GetInMemoryDbContext();
-      var genreService = new GenreService(context);
-      var repo = new TestEntityRepository();
+      var genre = f.AddGenre();
 
-      var genre1 = repo.NewGenre();
-      var genre2 = repo.NewGenre();
-      var genre3 = repo.NewGenre();
-      var genre4 = repo.NewGenre();
+      var resName = await _genreService.HasGenreAsync(genre.Name);
+      var resId = await _genreService.HasGenreAsync(genre.Id);
 
-      await context.Genres.AddRangeAsync(genre1, genre2); //Not Genre3 or Genre4
+      var resNameFalse = await _genreService.HasGenreAsync("NotAGenre");
+      var resIdFalse = await _genreService.HasGenreAsync(Guid.NewGuid());
 
-      await context.SaveChangesAsync();
-
-      // Act
-      var result1 = await genreService.HasGenreAsync(genre1.Id);
-      var result2 = await genreService.HasGenreAsync(genre2.Name);
-      var result3 = await genreService.HasGenreAsync(genre3.Id);
-      var result4 = await genreService.HasGenreAsync(genre4.Name);
-      var result5 = await genreService.HasGenreAsync("Fake Genre");
-      var result6 = await genreService.HasGenreAsync(Guid.NewGuid());
-
-      // Assert
-      Assert.True(result1);
-      Assert.True(result2);
-      Assert.False(result3);
-      Assert.False(result4);
-      Assert.False(result5);
-      Assert.False(result6);
+      Assert.True(resName);
+      Assert.True(resId);
+      Assert.False(resNameFalse);
+      Assert.False(resIdFalse);
     }
 
     [Fact]
     public async Task CanGetGenres()
     {
-      // Arrange
-      var context = GetInMemoryDbContext();
-      var genreService = new GenreService(context);
-      var repo = new TestEntityRepository();
+      var genre1 = f.AddGenre();
+      var genre2 = f.AddGenre();
+      var genre3 = f.AddGenre();
+      var genre4 = f.AddGenre();
 
-      var genre1 = repo.NewGenre();
-      var genre2 = repo.NewGenre();
-      var genre3 = repo.NewGenre();
-      var genre4 = repo.NewGenre();
+      var genresById = await _genreService.GetGenresAsync(new List<Guid> { genre1.Id, genre2.Id, genre3.Id, genre4.Id });
+      var genreById = await _genreService.GetGenreAsync(genre1.Id);
 
-      await context.Genres.AddRangeAsync(genre1, genre2, genre3);
-      await context.SaveChangesAsync();
-      // Act
-      var result1 = await genreService.GetGenreAsync(genre1.Id);
-      var result2 = await genreService.GetGenreAsync(genre2.Name);
-      var result3 = await genreService.GetGenresAsync(new List<string>() { genre2.Name, genre3.Name, genre4.Name, "Fake Genre"});
-      var result4 = await genreService.GetGenreAsync("Fake Genre");
-      var result5 = await genreService.GetGenreAsync(Guid.NewGuid());
-      // Assert
-      Assert.Equal(genre1, result1);
-      Assert.Equal(genre2, result2);
-      Assert.Equal(new List<Genre>() { genre2, genre3 }, result3);;
-      Assert.Null(result4);
-      Assert.Null(result5);
+      var genresByName = await _genreService.GetGenresAsync(new List<string> { genre1.Name, genre2.Name, genre3.Name, genre4.Name });
+      var genreByName = await _genreService.GetGenreAsync(genre1.Name);
 
-      await context.SaveChangesAsync();
+      var notFoundById = await _genreService.GetGenreAsync(Guid.NewGuid());
+      var notFoundByName = await _genreService.GetGenreAsync("NotAGenre");
+
+      Assert.Equal(4, genresById.Count);
+      Assert.Equal(4, genresByName.Count);
+
+      Assert.NotNull(genreById);
+      Assert.NotNull(genreByName);
+
+      Assert.Null(notFoundById);
+      Assert.Null(notFoundByName);
     }
 
     [Fact]
-    public async Task CanAddOrGetGenres()
+    public async Task CanCreateGenre()
     {
-      // Arrange
-      var context = GetInMemoryDbContext();
-      var genreService = new GenreService(context);
-      var repo = new TestEntityRepository();
+      var genre = await _genreService.CreateGenreAsync("TestGenre");
+      var genres = await _genreService.CreateGenresAsync(new List<string> { "TestGenre1", "TestGenre2", "TestGenre3" });
 
-      var genre1 = repo.NewGenre();
-      var genre2 = repo.NewGenre();
-      var genre3 = repo.NewGenre();
-      var genre4 = repo.NewGenre();
+      var genreFromDb = await _context.Genres.FirstOrDefaultAsync(g => g.Id == genre.Id);
+      var genresFromDb = await _context.Genres.Where(g => genres.Select(g => g.Id).Contains(g.Id)).ToListAsync();
 
-      await context.Genres.AddRangeAsync(genre1, genre2);
-      await context.SaveChangesAsync();
-      // Act
-      var result1 = await genreService.AddOrGetGenreAsync(genre2.Name);
-      var result2 = await genreService.AddOrGetGenreAsync(genre3.Name);
-      var result3 = await genreService.AddOrGetGenresAsync(new List<string>() { genre3.Name, genre4.Name});
+      Assert.NotNull(genre);
+      Assert.NotNull(genreFromDb);
 
-      var genres = await context.Genres.ToListAsync();
-      // Assert
-      Assert.Equal(4, genres.Count);
-      Assert.Equal(genre2, result1);
-      Assert.Equal(genre3.Name, result2.Name);
-      Assert.Equal(new List<Genre>() { genre3, genre4 }.Select(p => p.Name), result3.Select(p => p.Name));
+      Assert.Equal(genre.Id, genreFromDb.Id);
+      Assert.Equal(genre.Name, genreFromDb.Name);
+
+      Assert.Equal(3, genres.Count);
+      Assert.Equal(3, genresFromDb.Count);
+    }
+
+    [Fact]
+    public async Task CanGetOrCreateGenres()
+    {
+      var genre1 = f.AddGenre();
+      var genre2 = f.AddGenre();
+      var genre3 = f.AddGenre();
+
+      var createdGenre1 = GenreFaker.Generate();
+      var createdGenre2 = GenreFaker.Generate();
+
+      var genres = await _genreService.GetOrCreateGenresAsync(new List<string> { genre1.Name, genre2.Name, createdGenre1.Name });
+      var firstGenre = await _genreService.GetOrCreateGenreAsync(genre3.Name);
+      var secodGenre = await _genreService.GetOrCreateGenreAsync(createdGenre2.Name);
+
+      var genresFromDb = await _context.Genres.ToListAsync();
+
+      Assert.Equal(5, genresFromDb.Count());
+      Assert.Equal(3, genres.Count);
+      Assert.Equal(genre3.Id, firstGenre.Id);
+      Assert.Equal(genre3.Name, firstGenre.Name);
+      Assert.Equal(createdGenre2.Name, secodGenre.Name);
+
     }
 
     [Fact]
     public async Task CanRemoveGenres()
     {
-      // Arrange
-      var context = GetInMemoryDbContext();
-      var genreService = new GenreService(context);
-      var repo = new TestEntityRepository();
+      var genre1 = f.AddGenre();
+      var genre2 = f.AddGenre();
+      var genre3 = f.AddGenre();
+      var genre4 = f.AddGenre();
+      var genre5 = f.AddGenre();
+      var genre6 = f.AddGenre();
+      var genre7 = f.AddGenre();
+      var genre8 = f.AddGenre();
+      var genre9 = f.AddGenre();
+      var genre10 = f.AddGenre();
 
-      var genre1 = repo.NewGenre();
-      var genre2 = repo.NewGenre();
-      var genre3 = repo.NewGenre();
-      var genre4 = repo.NewGenre();
-      var genre5 = repo.NewGenre();
-      var genre6 = repo.NewGenre();
-      var genre7 = repo.NewGenre();
-      var genre8 = repo.NewGenre();
+      var remove1and2 = await _genreService.RemoveGenresAsync(new List<Guid> { genre1.Id, genre2.Id });
+      var remove3 = await _genreService.RemoveGenreAsync(genre3.Id);
+      var remove4and5 = await _genreService.RemoveGenresAsync(new List<string> { genre4.Name, genre5.Name });
+      var remove6 = await _genreService.RemoveGenreAsync(genre6.Name);
+      var remove7and8 = await _genreService.RemoveGenresAsync(new List<Genre> { genre7, genre8 });
+      var remove9 = await _genreService.RemoveGenreAsync(genre9);
 
-      await context.Genres.AddRangeAsync(genre1, genre2, genre3, genre4, genre5, genre6, genre7);
-      await context.SaveChangesAsync();
-      // Act
-      await genreService.RemoveGenreAsync(genre2.Id);
-      await genreService.RemoveGenreAsync(genre3.Name);
-      await genreService.RemoveGenresAsync(new List<Guid>() { genre4.Id, genre5.Id });
-      await genreService.RemoveGenresAsync(new List<string>() { genre6.Name, genre8.Name });
+      var genresFromDb = await _context.Genres.ToListAsync();
 
-      var genres = await context.Genres.ToListAsync();
-
-      // Assert
-      Assert.Equal(2, genres.Count);
-      Assert.DoesNotContain(genre2, genres);
-      Assert.DoesNotContain(genre3, genres);
-      Assert.DoesNotContain(genre4, genres);
-      Assert.DoesNotContain(genre5, genres);
-      Assert.DoesNotContain(genre6, genres);
-      Assert.Contains(genre1, genres);
-      Assert.Contains(genre7, genres);
-
+      Assert.Equal(2, remove1and2);
+      Assert.Equal(2, remove4and5);
+      Assert.Equal(2, remove7and8);
+      Assert.True(remove3);
+      Assert.True(remove6);
+      Assert.True(remove9);
+      Assert.Single(genresFromDb);
+      Assert.Contains(genresFromDb, g => g.Id == genre10!.Id);
     }
   }
 }

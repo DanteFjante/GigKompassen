@@ -1,335 +1,313 @@
-﻿using GigKompassen.Dto.Profiles;
+﻿using GigKompassen.Data;
 using GigKompassen.Enums;
+using GigKompassen.Models.Accounts;
 using GigKompassen.Models.Profiles;
 using GigKompassen.Services;
 using GigKompassen.Test.Helpers;
 
-using Microsoft.EntityFrameworkCore;
-
 using static GigKompassen.Test.Helpers.DbContextHelper;
+using static GigKompassen.Test.Helpers.BogusRepositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace GigKompassen.Test.Tests.Services
 {
   public class ArtistServiceTests
   {
+    private readonly ArtistService _artistService;
+    private readonly UserService _userService;
+    private readonly GenreService _genreService;
+    private readonly MediaService _mediaService;
+    private readonly ApplicationDbContext _context;
+
+    private readonly FakeDataHelper f;
+
+    public ArtistServiceTests() 
+    {
+      _context = GetInMemoryDbContext();
+      _userService = new UserService(_context, GetMockedUserManager(_context));
+      _genreService = new GenreService(_context);
+      _mediaService = new MediaService(_context, _userService);
+      _artistService = new ArtistService(_context, _userService, _genreService, _mediaService);
+      
+      f = new FakeDataHelper(_context);
+    }
+
+    #region Fake Data setup
+    #endregion
 
     [Fact]
     public async Task CanGetAllArtistProfiles()
     {
-      var context = GetInMemoryDbContext();
-      var mediaService = new MediaService(context);
-      var genreService = new GenreService(context);
-      var artistService = new ArtistService(context, mediaService, genreService);
-      var repo = new TestEntityRepository();
+      // Arrange
+      f.SetupFakeData();
+      var profile = f.AddFakeArtistProfile(Guid.NewGuid());
 
-      var genre1 = repo.NewGenre();
-      var genre2 = repo.NewGenre();
-      var genre3 = repo.NewGenre();
-      
-      var member1 = repo.NewArtistMember();
-      var member2 = repo.NewArtistMember();
-      var member3 = repo.NewArtistMember();
+      // Act
+      var result = await _artistService.GetAllAsync();
 
-
-      var artistProfile1 = repo.GetArtistProfile();
-      var artistProfile2 = repo.GetArtistProfile(genres: new() { genre1, genre2 }, members: new() { member1 });
-      var artistProfile3 = repo.GetArtistProfile(genres: new() { genre2, genre3 }, members: new() { member2, member3 });
-
-      context.Genres.AddRange(genre1, genre2, genre3);
-      context.ArtistMembers.AddRange(member1, member2, member3);
-      context.ArtistProfiles.AddRange(artistProfile1, artistProfile2, artistProfile3);
-      context.SaveChanges();
-
-
-      var artistList = await artistService.GetAllAsync();
-      var artist1 = artistList.Find(a => a.Id == artistProfile1.Id);
-      var artist2 = artistList.Find(a => a.Id == artistProfile2.Id);
-      var artist3 = artistList.Find(a => a.Id == artistProfile3.Id);
-
-      Assert.NotNull(artist1);
-      Assert.NotNull(artist2);
-      Assert.NotNull(artist3);
-      Assert.Equal(3, artistList.Count);
-      Assert.Empty(artist1.Members!);
-      Assert.Single(artist2.Members!);
-      Assert.Equal(2, artist3.Members!.Count);
-      Assert.Empty(artist1.Genres!);
-      Assert.Equal(2, artist2.Genres!.Count);
-      Assert.Equal(2, artist3.Genres!.Count);
-
+      // Assert
+      Assert.Equal(7, result.Count());
     }
 
     [Fact]
     public async Task CanGetArtistProfileById()
     {
-      var context = GetInMemoryDbContext();
-      var mediaService = new MediaService(context);
-      var genreService = new GenreService(context);
-      var artistService = new ArtistService(context, mediaService, genreService);
-      var repo = new TestEntityRepository();
-
-      var genre1 = repo.NewGenre();
-      var genre2 = repo.NewGenre();
-
-      var member1 = repo.NewArtistMember();
-      var member2 = repo.NewArtistMember();
-
-      var artistProfile1 = repo.GetArtistProfile();
-      var artistProfile2 = repo.GetArtistProfile(genres: new() { genre1, genre2 }, members: new() { member1, member2 });
-
-      context.Genres.AddRange(genre1, genre2);
-      context.ArtistMembers.AddRange(member1, member2);
-      context.ArtistProfiles.AddRange(artistProfile1, artistProfile2);
-
-      context.SaveChanges();
-
-      var artist1 = await artistService.GetAsync(artistProfile1.Id);
-      var artist2 = await artistService.GetAsync(artistProfile2.Id);
-      var nullArtist = await artistService.GetAsync(Guid.NewGuid());
-
-      Assert.NotNull(artist1);
-      Assert.Equal(artistProfile1.Id, artist1!.Id);
-      Assert.NotNull(artist2);
-      Assert.Equal(artistProfile2.Id, artist2!.Id);
-      Assert.Null(nullArtist);
+      // Arrage
+      f.SetupFakeData();
+      var profile = f.AddFakeArtistProfile(Guid.NewGuid());
+      // Act
+      var result = await _artistService.GetAsync(profile.Id);
+      // Assert
+      Assert.Equal(profile, result);
     }
 
     [Fact]
     public async Task CanCreateArtistProfile()
     {
-      var context = GetInMemoryDbContext();
-      var repo = new TestEntityRepository();
-      var mediaService = new MediaService(context);
-      var genreService = new GenreService(context);
-      var artistService = new ArtistService(context, mediaService, genreService);
+      // Arrange
+      var user = f.AddFakeUser();
 
-      var user = repo.NewUser();
-      context.Users.Add(user);
-      context.SaveChanges();
+      var artistProfileDto = GetCreateArtistDtos(1).First();
+      var genres = GetGenreNames(2).ToList();
+      var members = GetArtistMemberDtos(2).ToList();
 
-      ArtistProfileDto dto = new ArtistProfileDto()
-      {
-        Name = "Test Artist",
-        Location = "Test Location",
-        Bio = "Test Bio",
-        Description = "Test Description",
-        Availability = AvailabilityStatus.Closed,
-        Genres = new List<GenreDto>()
-        {
-          new GenreDto("Test Genre 1"),
-          new GenreDto("Test Genre 2")
-        },
-        Members = new List<ArtistMemberDto>()
-        {
-          new ArtistMemberDto("Test Member 1", "Test Role 1"),
-          new ArtistMemberDto("Test Member 2", "Test Role 2")
-        }
-      };
+      // Act
+      var profile = await _artistService.CreateAsync(user.Id, artistProfileDto, genres, members);
+      
+      // Assert
+      var allProfiles = _context.ArtistProfiles.ToList();
+      var allMembers = _context.ArtistMembers.ToList();
+      var allGenres = _context.Genres.ToList();
 
-      var artist = await artistService.CreateAsync(user.Id, dto);
+      Assert.Single(allProfiles);
+      Assert.Equal(2, allMembers.Count());
+      Assert.Equal(2, allGenres.Count());
 
-      var retrievedArtist = context.ArtistProfiles.Include(a => a.Genres)
-        .Include(a => a.Members)
-        .FirstOrDefault(a => a.Id == artist.Id);
+      Assert.Equal(artistProfileDto.Name, profile.Name);
+      Assert.Equal(artistProfileDto.PublicProfile, profile.Public);
+      Assert.Equal(artistProfileDto.Location, profile.Location);
+      Assert.Equal(artistProfileDto.Bio, profile.Bio);
+      Assert.Equal(artistProfileDto.Description, profile.Description);
+      Assert.Equal(artistProfileDto.Availability, profile.Availability);
 
-      Assert.NotNull(retrievedArtist);
-      Assert.Equal(dto.Name, retrievedArtist.Name);
-      Assert.Equal(dto.Location, retrievedArtist.Location);
-      Assert.Equal(dto.Bio, retrievedArtist.Bio);
-      Assert.Equal(dto.Description, retrievedArtist.Description);
-      Assert.Equal(dto.Availability, retrievedArtist.Availability);
-      Assert.Equal(dto.Genres.Count, retrievedArtist.Genres.Count);
-      Assert.Equal(dto.Members.Count, retrievedArtist.Members.Count);
-      Assert.Contains(retrievedArtist.Genres, g => g.Name == "Test Genre 1");
-      Assert.Contains(retrievedArtist.Genres, g => g.Name == "Test Genre 2");
-      Assert.Contains(retrievedArtist.Members, g => g.Name == "Test Member 1");
-      Assert.Contains(retrievedArtist.Members, g => g.Name == "Test Member 2");
+      Assert.Equal(genres.Count(), profile.Genres!.Count());
+      Assert.Contains(profile.Genres!, g => genres.Contains(g.Name));
 
+      Assert.Equal(members.Count(), profile.Members!.Count());
+      Assert.Contains(profile.Members!, m => members.Select(am => am.Name).Contains(m.Name));
+      Assert.Contains(profile.Members!, m => members.Select(am => am.Role).Contains(m.Role));
 
+      Assert.NotNull(profile.MediaGalleryOwner);
+      Assert.NotNull(profile.MediaGalleryOwner.Galleries);
     }
 
     [Fact]
     public async Task CanUpdateArtistProfile()
     {
-      var context = GetInMemoryDbContext();
-      var mediaService = new MediaService(context);
-      var genreService = new GenreService(context);
-      var artistService = new ArtistService(context, mediaService, genreService);
-      var repo = new TestEntityRepository();
+      // Arrange
+      var artistProfile = f.AddFakeArtistProfile(Guid.NewGuid());
+      var genreToKeep = f.AddFakeGenreToArtist(artistProfile!.Id)!;
+      var genreToDiscard = f.AddFakeGenreToArtist(artistProfile!.Id)!;
+      var oldGenres = new List<Genre>() {genreToKeep, genreToDiscard};
+      var newGenres = GetGenreNames(2).Append(genreToKeep.Name).ToList();
 
+      var memberToKeep = f.AddFakeArtistMember(artistProfile!.Id)!;
+      var updatedMemberDto = new ArtistMemberDto(memberToKeep.Id, "Updated Name", "Updated Role");
+      var memberToDiscard = f.AddFakeArtistMember(artistProfile!.Id)!;
+      var oldMembers = new List<ArtistMember>() { memberToKeep, memberToDiscard };
+      var newMembers = GetArtistMemberDtos(2).Append(updatedMemberDto).ToList();
 
-      var genre1 = repo.NewGenre();
-      var genre2 = repo.NewGenre();
-      var artistMember1 = repo.NewArtistMember();
-      var artistMember2 = repo.NewArtistMember();
-      var artistProfile = repo.GetArtistProfile(genres: new(){genre1, genre2}, members: new() { artistMember1,artistMember2});
+      var dto = new UpdateArtistDto("Updated Name", "Updated Location", "Updated Bio", "Updated Description", AvailabilityStatus.Closed, false);
 
-      context.ArtistProfiles.Add(artistProfile);
-      context.SaveChanges();
+      // Act
+      var profile = await _artistService.UpdateAsync(artistProfile!.Id, dto, newGenres, newMembers);
+      
+      // Assert
+      var allProfiles = _context.ArtistProfiles.ToList();
+      var allMembers = _context.ArtistMembers.ToList();
+      var allGenres = _context.Genres.ToList();
+      var genresOfProfile = _context.ArtistProfiles.FirstOrDefault(ap => ap.Id == profile.Id)!.Genres;
+      var membersOfProfile = _context.ArtistProfiles.FirstOrDefault(ap => ap.Id == profile.Id)!.Members;
+      var updatedMember = _context.ArtistMembers.FirstOrDefault(m => m.Id == memberToKeep.Id);
 
-      ArtistProfileDto dto = new ArtistProfileDto()
-      {
-        Id = artistProfile.Id,
-        Name = "Updated Artist",
-        Location = "Updated Location",
-        Bio = "Updated Bio",
-        Description = "Updated Description",
-        Availability = AvailabilityStatus.Closed,
-        Genres = new List<GenreDto>()
-        {
-          new GenreDto("Updated Genre 1"),
-          new GenreDto("Updated Genre 2")
-        },
-        Members = new List<ArtistMemberDto>()
-        {
-          new ArtistMemberDto("Updated Member 1", "Updated Role 1"),
-          new ArtistMemberDto("Updated Member 2", "Updated Role 2")
-        }
-      };
+      Assert.Single(allProfiles);
+      Assert.Equal(3, allMembers.Count());
+      Assert.Equal(3, membersOfProfile.Count());
+      Assert.Equal(3, allGenres.Count());
+      Assert.Equal(3, genresOfProfile.Count());
 
-      var updatedArtist = await artistService.UpdateAsync(artistProfile.Id, dto);
+      Assert.Equal(artistProfile.Id, profile.Id); 
+      Assert.Equal("Updated Name", profile.Name);
+      Assert.Equal("Updated Location", profile.Location);
+      Assert.Equal("Updated Bio", profile.Bio);
+      Assert.Equal("Updated Description", profile.Description);
+      Assert.Equal(AvailabilityStatus.Closed, profile.Availability);
+      Assert.False(profile.Public);
 
-      var retrievedArtist = context.ArtistProfiles.Include(a => a.Genres)
-        .Include(a => a.Members)
-        .Include(a => a.Genres)
-        .FirstOrDefault(a => a.Id == updatedArtist.Id);
+      Assert.Contains(membersOfProfile, m => m.Id == memberToKeep.Id);
+      Assert.DoesNotContain(membersOfProfile, m => m.Id == memberToDiscard.Id);
+      Assert.DoesNotContain(allMembers, m => m.Id == memberToDiscard.Id);
+      
+      Assert.Contains(membersOfProfile, m => m.Name == "Updated Name");
+      Assert.Contains(membersOfProfile, m => m.Role == "Updated Role");
 
-      Assert.NotNull(retrievedArtist);
-      Assert.Equal(dto.Name, retrievedArtist.Name);
-      Assert.Equal(dto.Location, retrievedArtist.Location);
-      Assert.Equal(dto.Bio, retrievedArtist.Bio);
-      Assert.Equal(dto.Description, retrievedArtist.Description);
-      Assert.Equal(dto.Availability, retrievedArtist.Availability);
-      Assert.Equal(dto.Genres.Count, retrievedArtist.Genres.Count);
-      Assert.Contains(retrievedArtist.Genres, g => g.Name == "Updated Genre 1");
-      Assert.Contains(retrievedArtist.Genres, g => g.Name == "Updated Genre 2");
-      Assert.Equal(dto.Members.Count, retrievedArtist.Members.Count);
-      Assert.Contains(retrievedArtist.Members, g => g.Name == "Updated Member 1");
-      Assert.Contains(retrievedArtist.Members, g => g.Name == "Updated Member 2");
+      Assert.Contains(genresOfProfile, g => g.Name == genreToKeep.Name);
+      Assert.DoesNotContain(genresOfProfile, g => g.Name == genreToDiscard.Name);
+      Assert.DoesNotContain(allGenres, g => g.Name == genreToDiscard.Name);
+
     }
 
     [Fact]
     public async Task CanDeleteArtistProfile()
     {
-      var context = GetInMemoryDbContext();
-      var mediaService = new MediaService(context);
-      var genreService = new GenreService(context);
-      var artistService = new ArtistService(context, mediaService, genreService);
-      var repo = new TestEntityRepository();
+      // Arrange
+      var user = f.AddFakeUser()!;
+      var profile = f.AddFakeArtistProfile(user.Id)!;
+      var member1 = f.AddFakeArtistMember(profile.Id)!;
+      var member2 = f.AddFakeArtistMember(profile.Id)!;
+      var genre1 = f.AddFakeGenreToArtist(profile.Id)!;
+      var genre2 = f.AddFakeGenreToArtist(profile.Id)!;
+      var gallery = f.AddFakeGallery(profile.MediaGalleryOwnerId)!;
+      var item = f.AddFakeMediaItem(gallery.Id)!;
+      var link = item.MediaLink!;
 
+      var profileToKeep = f.AddFakeArtistProfile(user.Id)!;
+      var genreToKeep = f.AddFakeGenreToArtist(profileToKeep.Id)!;
+      f.AddArtistToGenre(profileToKeep.Id, genreToKeep.Id);
 
-      var genre1 = repo.NewGenre();
-      var genre2 = repo.NewGenre();
-      var artistMember1 = repo.NewArtistMember();
-      var artistMember2 = repo.NewArtistMember();
-      var artistProfile = repo.GetArtistProfile(genres: new() { genre1, genre2 }, members: new() { artistMember1, artistMember2 });
+      // Act
+      await _artistService.DeleteAsync(profile.Id);
 
-      context.ArtistProfiles.Add(artistProfile);
-      context.SaveChanges();
+      // Assert
+      var allProfiles = _context.ArtistProfiles.ToList();
+      var allMembers = _context.ArtistMembers.ToList();
+      var allGenres = _context.Genres.ToList();
+      var allGalleryOwners = _context.MediaGalleryOwners.ToList();
+      var allGalleries = _context.MediaGalleries.ToList();
+      var allItems = _context.MediaItems.ToList();
+      var allLinks = _context.MediaLinks.ToList();
 
-      var didDelete = await artistService.DeleteAsync(artistProfile.Id);
+      Assert.Single(allProfiles);
+      Assert.Equal(allProfiles.First(), profileToKeep);
+      
+      Assert.Empty(allMembers);
+      Assert.Single(allGenres);
+      Assert.Equal(allGenres.First(), genreToKeep);
 
-      Assert.True(didDelete);
-      Assert.Empty(context.ArtistProfiles.ToList());
+      Assert.Single(allGalleryOwners);
+      Assert.Empty(allGalleries);
+      Assert.Empty(allItems);
+      Assert.Empty(allLinks);
 
     }
 
     [Fact]
     public async Task CanAddArtistMember()
     {
-      var context = GetInMemoryDbContext();
-      var mediaService = new MediaService(context);
-      var genreService = new GenreService(context);
-      var artistService = new ArtistService(context, mediaService, genreService);
-      var repo = new TestEntityRepository();
+      // Arrange
+      var user = f.AddFakeUser()!;
+      var artistProfile = f.AddFakeArtistProfile(user.Id)!;
+      var dto = GetArtistMemberDtos(1).First();
 
+      // Act
+      await _artistService.AddMemberAsync(artistProfile.Id, dto);
 
-      var genre1 = repo.NewGenre();
-      var genre2 = repo.NewGenre();
-      var artistMember1 = repo.NewArtistMember();
-      var artistMember2 = repo.NewArtistMember();
-      var artistProfile = repo.GetArtistProfile(genres: new() { genre1, genre2 }, members: new() { artistMember1, artistMember2 });
+      // Assert
+      var profile = await _context.ArtistProfiles.FirstOrDefaultAsync(p => p.Id == artistProfile.Id);
 
-      context.ArtistProfiles.Add(artistProfile);
-      context.SaveChanges();
-
-      ArtistMemberDto newMember = new ArtistMemberDto("New Member", "New Role");
-      var artistMember = await artistService.AddMember(artistProfile.Id, newMember);
-
-      var retrievedArtist = context.ArtistProfiles.Include(a => a.Members)
-        .FirstOrDefault(a => a.Id == artistProfile.Id);
-
-      Assert.NotNull(retrievedArtist);
-      Assert.Contains(retrievedArtist.Members, m => m.Name == "New Member");
-      Assert.Contains(retrievedArtist.Members, m => m.Role == "New Role");
-      Assert.Equal(3, retrievedArtist.Members.Count);
+      Assert.Contains(profile.Members, m => m.Name == dto.Name);
+      Assert.Contains(profile.Members, m => m.Role == dto.Role);
     }
 
     [Fact]
     public async Task CanUpdateArtistMember()
     {
-      var context = GetInMemoryDbContext();
-      var mediaService = new MediaService(context);
-      var genreService = new GenreService(context);
-      var artistService = new ArtistService(context, mediaService, genreService);
-      var repo = new TestEntityRepository();
+      // Arrange
+      var user = f.AddFakeUser()!;
+      var artistProfile = f.AddFakeArtistProfile(user.Id)!;
+      var member = f.AddFakeArtistMember(artistProfile.Id)!;
 
+      var updated = ArtistMemberFaker.Generate();
+      updated.Id = member.Id;
+      var dto = ArtistMemberDto.FromArtistMember(updated);
 
-      var genre1 = repo.NewGenre();
-      var genre2 = repo.NewGenre();
-      var artistMember1 = repo.NewArtistMember();
-      var artistMember2 = repo.NewArtistMember();
-      var artistProfile = repo.GetArtistProfile(genres: new() { genre1, genre2 }, members: new() { artistMember1, artistMember2 });
+      // Act
+      await _artistService.UpdateMemberAsync(dto);
+      
+      // Assert
+      var profile = await _context.ArtistProfiles.FirstOrDefaultAsync(p => p.Id == artistProfile.Id);
 
-      context.ArtistProfiles.Add(artistProfile);
-      context.SaveChanges();
-
-      ArtistMemberDto updatedMember = new ArtistMemberDto(artistMember1.Id, "Updated Member", "Updated Role");
-      ArtistMemberDto fakeMember = new ArtistMemberDto("Fake Updated Member", "Fake Updated Role");
-      var artistMember = await artistService.UpdateMember(artistMember1.Id, updatedMember);
-      var fakeArtistMember = await artistService.UpdateMember(Guid.NewGuid(), fakeMember);
-
-      var retrievedArtist = context.ArtistProfiles.Include(a => a.Members)
-        .FirstOrDefault(a => a.Id == artistProfile.Id);
-
-      Assert.NotNull(retrievedArtist);
-      Assert.Contains(retrievedArtist.Members, m => m.Name == "Updated Member");
-      Assert.Contains(retrievedArtist.Members, m => m.Role == "Updated Role");
-      Assert.DoesNotContain(retrievedArtist.Members, m => m.Name == "Fake Updated Member");
-      Assert.DoesNotContain(retrievedArtist.Members, m => m.Role == "Fake Updated Role");
-      Assert.Equal(2, retrievedArtist.Members.Count);
-
+      Assert.Contains(profile.Members, m => m.Name == updated.Name);
+      Assert.Contains(profile.Members, m => m.Role == updated.Role);
     }
 
     [Fact]
     public async Task CanRemoveArtistMember()
     {
-      var context = GetInMemoryDbContext();
-      var mediaService = new MediaService(context);
-      var genreService = new GenreService(context);
-      var artistService = new ArtistService(context, mediaService, genreService);
-      var repo = new TestEntityRepository();
+      // Arrange
+      var user = f.AddFakeUser()!;
+      var artistProfile = f.AddFakeArtistProfile(user.Id)!;
+      var member = f.AddFakeArtistMember(artistProfile.Id)!;
 
+      // Act
+      await _artistService.RemoveMemberAsync(member.Id);
+      
+      // Assert
+      var profile = await _context.ArtistProfiles.FirstOrDefaultAsync(p => p.Id == artistProfile.Id);
+      var members = await _context.ArtistMembers.ToListAsync();
 
-      var genre1 = repo.NewGenre();
-      var genre2 = repo.NewGenre();
-      var artistMember1 = repo.NewArtistMember();
-      var artistMember2 = repo.NewArtistMember();
-      var artistProfile = repo.GetArtistProfile(genres: new() { genre1, genre2 }, members: new() { artistMember1, artistMember2 });
-
-      context.ArtistProfiles.Add(artistProfile);
-      context.SaveChanges();
-
-      var didRemove = await artistService.RemoveMember(artistMember1.Id);
-
-      var retrievedArtist = context.ArtistProfiles.Include(a => a.Members)
-        .FirstOrDefault(a => a.Id == artistProfile.Id);
-
-      Assert.NotNull(retrievedArtist);
-      Assert.DoesNotContain(retrievedArtist.Members, m => m.Id == artistMember1.Id);
-
+      Assert.DoesNotContain(profile!.Members!, m => m.Id == member.Id);
+      Assert.DoesNotContain(members, m => m.Id == member.Id);
     }
 
+    [Fact]
+    public async Task CanAddGenre()
+    {
+      // Arrange
+      var user = f.AddFakeUser()!;
+      var artistProfile = f.AddFakeArtistProfile(user.Id)!;
+      var genre = GetGenreNames(1).First();
+      
+      // Act
+      await _artistService.AddGenreAsync(artistProfile.Id, genre);
 
+      // Assert
+      var profile = await _context.ArtistProfiles.FirstOrDefaultAsync(p => p.Id == artistProfile.Id);
+
+      Assert.Contains(profile!.Genres!, g => g.Name == genre);
+    }
+
+    [Fact]
+    public async Task CanRemoveGenre()
+    {
+      // Arrange
+      var user = f.AddFakeUser()!;
+      var artistProfile = f.AddFakeArtistProfile(user.Id)!;
+      var artistProfile2 = f.AddFakeArtistProfile(user.Id)!;
+
+      var genre = f.AddFakeGenreToArtist(artistProfile.Id)!;
+      var genreToKeep = f.AddFakeGenreToArtist(artistProfile.Id)!;
+      var genreToNotTouch = f.AddFakeGenreToArtist(artistProfile.Id)!;
+      f.AddArtistToGenre(artistProfile2.Id, genreToKeep.Id);
+      
+      // Act
+      await _artistService.RemoveGenreAsync(artistProfile.Id, genre.Name);
+      await _artistService.RemoveGenreAsync(artistProfile.Id, genreToKeep.Name);
+
+      // Assert
+      var profile = await _context.ArtistProfiles.FirstOrDefaultAsync(p => p.Id == artistProfile.Id);
+      var genres = await _context.Genres.ToListAsync();
+      
+      Assert.Equal(2, genres.Count);
+      Assert.Single(profile!.Genres!);
+
+      Assert.Contains(genres!, g => g.Name == genreToKeep.Name);
+      Assert.Contains(genres!, g => g.Name == genreToNotTouch.Name);
+      Assert.DoesNotContain(genres!, g => g.Name == genre.Name);
+
+      Assert.Contains(profile!.Genres!, g => g.Name == genreToNotTouch.Name);
+      Assert.DoesNotContain(profile!.Genres!, g => g.Name == genre.Name);
+      Assert.DoesNotContain(profile!.Genres!, g => g.Name == genreToKeep.Name);
+    }
   }
 }
