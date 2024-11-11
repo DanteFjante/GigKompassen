@@ -26,18 +26,7 @@
       </div>
 
       @* Add additional fields based on the user's role *@
-      @if (Model.AccountType == "Artist")
-      {
-        @await Html.PartialAsync("Partials/Forms/_CreateArtistProfilePartial", Model.ArtistProfile);
-      }
-      else if (Model.AccountType == "Scene")
-      {
-        @await Html.PartialAsync("Partials/Forms/_CreateSceneProfilePartial", Model.SceneProfile);
-      }
-      else if (Model.AccountType == "Manager")
-      {
-        @await Html.PartialAsync("Partials/Forms/_CreateManagementProfilePartial", Model.ManagerProfile);
-      }
+
 
       <button type="submit" class="w-100 btn btn-lg btn-primary">Complete Registration</button>
     </form>

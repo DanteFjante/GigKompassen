@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace GigKompassen.Web.Migrations
 {
     /// <inheritdoc />
-    public partial class mssqllocal_migration_440 : Migration
+    public partial class mssqllocal_migration_870 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -81,31 +81,14 @@ namespace GigKompassen.Web.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Profiles",
+                name: "MediaGalleries",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Public = table.Column<bool>(type: "bit", nullable: false),
-                    ProfileType = table.Column<int>(type: "int", nullable: false),
-                    ArtistProfile_Location = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Bio = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ArtistProfile_Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Availability = table.Column<int>(type: "int", nullable: true),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Location = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    VenueType = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ContactInfo = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Capacity = table.Column<int>(type: "int", nullable: true),
-                    SceneProfile_Bio = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SceneProfile_Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Amenities = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    OpeningHours = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Profiles", x => x.Id);
+                    table.PrimaryKey("PK_MediaGalleries", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -231,8 +214,87 @@ namespace GigKompassen.Web.Migrations
                         name: "FK_MediaLinks_AspNetUsers_UploaderId",
                         column: x => x.UploaderId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Profiles",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Public = table.Column<bool>(type: "bit", nullable: false),
+                    ProfileType = table.Column<int>(type: "int", nullable: false),
+                    OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ArtistProfile_Location = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Bio = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ArtistProfile_Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Availability = table.Column<int>(type: "int", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Location = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    VenueType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ContactInfo = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Capacity = table.Column<int>(type: "int", nullable: true),
+                    SceneProfile_Bio = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SceneProfile_Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Amenities = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OpeningHours = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Profiles", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Profiles_AspNetUsers_OwnerId",
+                        column: x => x.OwnerId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MediaItems",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    GalleryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    LinkId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MediaItems", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MediaItems_MediaGalleries_GalleryId",
+                        column: x => x.GalleryId,
+                        principalTable: "MediaGalleries",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_MediaItems_MediaLinks_LinkId",
+                        column: x => x.LinkId,
+                        principalTable: "MediaLinks",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MessageContents",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Created = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DataType = table.Column<int>(type: "int", nullable: false),
+                    Comment = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    MediaLinkId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Text = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MessageContents", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MessageContents_MediaLinks_MediaLinkId",
+                        column: x => x.MediaLinkId,
+                        principalTable: "MediaLinks",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -251,8 +313,7 @@ namespace GigKompassen.Web.Migrations
                         name: "FK_ArtistMembers_Profiles_ArtistProfileId",
                         column: x => x.ArtistProfileId,
                         principalTable: "Profiles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -308,10 +369,10 @@ namespace GigKompassen.Web.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    GalleryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ChatId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     ArtistProfileId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    SceneProfileId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    SceneProfileId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    GalleryId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -320,20 +381,22 @@ namespace GigKompassen.Web.Migrations
                         name: "FK_MediaGalleryOwners_Chats_ChatId",
                         column: x => x.ChatId,
                         principalTable: "Chats",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_MediaGalleryOwners_MediaGalleries_GalleryId",
+                        column: x => x.GalleryId,
+                        principalTable: "MediaGalleries",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_MediaGalleryOwners_Profiles_ArtistProfileId",
                         column: x => x.ArtistProfileId,
                         principalTable: "Profiles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_MediaGalleryOwners_Profiles_SceneProfileId",
                         column: x => x.SceneProfileId,
                         principalTable: "Profiles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -352,81 +415,12 @@ namespace GigKompassen.Web.Migrations
                         name: "FK_ProfileAccesses_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ProfileAccesses_Profiles_ProfileId",
                         column: x => x.ProfileId,
                         principalTable: "Profiles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "MessageContents",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Created = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    DataType = table.Column<int>(type: "int", nullable: false),
-                    Comment = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    MediaLinkId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    Text = table.Column<string>(type: "nvarchar(max)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_MessageContents", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_MessageContents_MediaLinks_MediaLinkId",
-                        column: x => x.MediaLinkId,
-                        principalTable: "MediaLinks",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "MediaGalleries",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_MediaGalleries", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_MediaGalleries_MediaGalleryOwners_OwnerId",
-                        column: x => x.OwnerId,
-                        principalTable: "MediaGalleryOwners",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "MediaItems",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    GalleryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    LinkId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_MediaItems", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_MediaItems_MediaGalleries_GalleryId",
-                        column: x => x.GalleryId,
-                        principalTable: "MediaGalleries",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_MediaItems_MediaLinks_LinkId",
-                        column: x => x.LinkId,
-                        principalTable: "MediaLinks",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -447,20 +441,17 @@ namespace GigKompassen.Web.Migrations
                         name: "FK_ChatMessages_ChatMessages_ReplyToId",
                         column: x => x.ReplyToId,
                         principalTable: "ChatMessages",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ChatMessages_Chats_ChatId",
                         column: x => x.ChatId,
                         principalTable: "Chats",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ChatMessages_MessageContents_ContentId",
                         column: x => x.ContentId,
                         principalTable: "MessageContents",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -479,20 +470,17 @@ namespace GigKompassen.Web.Migrations
                         name: "FK_ChatParticipants_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ChatParticipants_ChatMessages_LastReadId",
                         column: x => x.LastReadId,
                         principalTable: "ChatMessages",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ChatParticipants_Chats_ChatId",
                         column: x => x.ChatId,
                         principalTable: "Chats",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateIndex(
@@ -590,12 +578,6 @@ namespace GigKompassen.Web.Migrations
                 column: "SceneProfilesId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MediaGalleries_OwnerId",
-                table: "MediaGalleries",
-                column: "OwnerId",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "IX_MediaGalleryOwners_ArtistProfileId",
                 table: "MediaGalleryOwners",
                 column: "ArtistProfileId",
@@ -608,6 +590,13 @@ namespace GigKompassen.Web.Migrations
                 column: "ChatId",
                 unique: true,
                 filter: "[ChatId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MediaGalleryOwners_GalleryId",
+                table: "MediaGalleryOwners",
+                column: "GalleryId",
+                unique: true,
+                filter: "[GalleryId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_MediaGalleryOwners_SceneProfileId",
@@ -649,13 +638,17 @@ namespace GigKompassen.Web.Migrations
                 table: "ProfileAccesses",
                 column: "UserId");
 
+            migrationBuilder.CreateIndex(
+                name: "IX_Profiles_OwnerId",
+                table: "Profiles",
+                column: "OwnerId");
+
             migrationBuilder.AddForeignKey(
                 name: "FK_ChatMessages_ChatParticipants_SenderId",
                 table: "ChatMessages",
                 column: "SenderId",
                 principalTable: "ChatParticipants",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);
+                principalColumn: "Id");
         }
 
         /// <inheritdoc />
@@ -698,6 +691,9 @@ namespace GigKompassen.Web.Migrations
                 name: "GenreSceneProfile");
 
             migrationBuilder.DropTable(
+                name: "MediaGalleryOwners");
+
+            migrationBuilder.DropTable(
                 name: "MediaItems");
 
             migrationBuilder.DropTable(
@@ -711,9 +707,6 @@ namespace GigKompassen.Web.Migrations
 
             migrationBuilder.DropTable(
                 name: "MediaGalleries");
-
-            migrationBuilder.DropTable(
-                name: "MediaGalleryOwners");
 
             migrationBuilder.DropTable(
                 name: "Profiles");

@@ -1,0 +1,115 @@
+﻿@using GigKompassen.Web.Components.Profiles
+@using GigKompassen.Enums
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+
+<EditForm Model="ArtistProfile" OnValidSubmit="HandleSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <h4>Create Artist Profile</h4>
+    <hr />
+
+    <!-- Name -->
+    <div class="form-group">
+        <label>Name</label>
+        <InputText @bind-Value="ArtistProfile.Name" class="form-control" />
+        <ValidationMessage For="@(() => ArtistProfile.Name)" />
+    </div>
+
+    <!-- Location -->
+    <div class="form-group">
+        <label>Location</label>
+        <InputText @bind-Value="ArtistProfile.Location" class="form-control" />
+        <ValidationMessage For="@(() => ArtistProfile.Location)" />
+    </div>
+
+    <!-- Availability -->
+    <div class="form-group">
+        <label>Availability</label>
+        <InputSelect @bind-Value="ArtistProfile.Availability" class="form-control">
+            @foreach (AvailabilityStatus status in Enum.GetValues(typeof(AvailabilityStatus)))
+            {
+                <option value="@status">@status</option>
+            }
+        </InputSelect>
+        <ValidationMessage For="@(() => ArtistProfile.Availability)" />
+    </div>
+
+    <!-- Bio -->
+    <div class="form-group">
+        <label>Bio</label>
+        <InputTextArea @bind-Value="ArtistProfile.Bio" class="form-control" />
+        <ValidationMessage For="@(() => ArtistProfile.Bio)" />
+    </div>
+
+    <!-- Description -->
+    <div class="form-group">
+        <label>Description</label>
+        <InputTextArea @bind-Value="ArtistProfile.Description" class="form-control" />
+        <ValidationMessage For="@(() => ArtistProfile.Description)" />
+    </div>
+
+    <!-- Genres -->
+    <div class="form-group">
+        <label>Genres</label>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>
+                        <button type="button" @onclick="AddGenre" class="btn btn-sm btn-success">Add Genre</button>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < Genres.Count; i++)
+                {
+                    <tr>
+                        <td>
+                            <InputText @bind-Value="Genres[i]" class="form-control" />
+                        </td>
+                        <td>
+                            <button type="button" @onclick="() => RemoveGenre(i)" class="btn btn-sm btn-danger">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Artist Members -->
+    <div class="form-group">
+        <label>Artist Members</label>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>
+                        <button type="button" @onclick="AddMember" class="btn btn-sm btn-success">Add Member</button>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < Members.Count; i++)
+                {
+                    <tr>
+                        <td>
+                            <InputText @bind-Value="Members[i].Name" class="form-control" />
+                        </td>
+                        <td>
+                            <InputText @bind-Value="Members[i].Role" class="form-control" />
+                        </td>
+                        <td>
+                            <button type="button" @onclick="() => RemoveMember(i)" class="btn btn-sm btn-danger">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Submit</button>
+</EditForm>

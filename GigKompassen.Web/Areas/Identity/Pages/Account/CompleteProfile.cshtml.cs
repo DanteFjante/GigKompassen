@@ -1,11 +1,6 @@
-
-using GigKompassen.Dto.Profiles;
 using GigKompassen.Models.Accounts;
-using GigKompassen.Models.Media;
-using GigKompassen.Models.Profiles;
 using GigKompassen.Services;
 using GigKompassen.Web.Models;
-using GigKompassen.Web.Models.Profiles.Create;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -22,13 +17,15 @@ namespace GigKompassen.Web.Areas.Identity.Pages.Account
   public class CompleteProfileModel : PageModel
   {
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly UserService _userService;
     private readonly ArtistService _artistService;
-    private readonly ManagerProfileService _managementService;
-    private readonly SceneProfileService _sceneService;
+    private readonly ManagerService _managementService;
+    private readonly SceneService _sceneService;
 
-    public CompleteProfileModel(UserManager<ApplicationUser> userManager, ArtistService artistService, ManagerProfileService managementService, SceneProfileService sceneService)
+    public CompleteProfileModel(UserManager<ApplicationUser> userManager, UserService userService, ArtistService artistService, ManagerService managementService, SceneService sceneService)
     {
       _userManager = userManager;
+      _userService = userService;
       _artistService = artistService;
       _managementService = managementService;
       _sceneService = sceneService;
@@ -37,14 +34,7 @@ namespace GigKompassen.Web.Areas.Identity.Pages.Account
     [BindProperty]
     public InputModel Input { get; set; }
 
-    [BindProperty(Name = "ArtistProfile")]
-    public CreateArtistProfileViewModel ArtistProfile { get; set; }
 
-    [BindProperty(Name = "SceneProfile")]
-    public CreateSceneProfileViewModel SceneProfile { get; set; }
-
-    [BindProperty(Name = "ManagerProfile")]
-    public CreateManagementProfileViewModel ManagerProfile { get; set; }
 
     public string AccountType { get; set; }
     public bool ProfileCompleted { get; set; }
@@ -60,8 +50,6 @@ namespace GigKompassen.Web.Areas.Identity.Pages.Account
       [Required]
       [Display(Name = "Last Name")]
       public string LastName { get; set; }
-
-
 
     }
 
@@ -84,7 +72,6 @@ namespace GigKompassen.Web.Areas.Identity.Pages.Account
       ProfileCompleted = user.ProfileCompleted;
       ProfileCompleteMessage = "Profile already completed";
 
-      ArtistProfile = new CreateArtistProfileViewModel();
       /*
       SceneProfile = new CreateSceneProfileViewModel();
       ManagementProfile = new CreateManagementProfileViewModel();
@@ -123,49 +110,67 @@ namespace GigKompassen.Web.Areas.Identity.Pages.Account
       {
         ModelState.Remove(key);
       }
-
+      /*
       if (ModelState.All(p => ModelState.GetFieldValidationState(p.Key) != ModelValidationState.Invalid ))
       {
         // Update user properties
-        user.FirstName = Input.FirstName;
-        user.LastName = Input.LastName;
-        user.ProfileCompleted = true;
+        var result = await _userService.CompleteUserProfileAsync(user.Id, Input.FirstName, Input.LastName);
 
         if (role == "Artist")
         {
           // Save Artist Group Profile
           // Implement logic to create and associate an ArtistProfile with the user
-          ArtistProfileDto artistProfile = FromViewModel(ArtistProfile);
-          var profile = await _artistService.CreateAsync(user.Id, artistProfile);
+          CreateArtistDto artistProfileDto = new CreateArtistDto(
+            ArtistProfile.Name,
+            ArtistProfile.Location,
+            ArtistProfile.Bio,
+            ArtistProfile.Description,
+            ArtistProfile.Availability,
+            true
+            );
+          var profile = await _artistService.CreateAsync(user.Id, artistProfileDto, ArtistProfile.Genres, ArtistProfile.Members.Select(m => new ArtistMemberDto(Name: m.Name, Role: m.Role)).ToList());
         }
         else if (role == "Scene")
         {
           // Save Scene Profile
           // Implement logic to create and associate a SceneProfile with the user
-          SceneProfileDto sceneProfile = FromViewModel(SceneProfile);
+          CreateSceneDto sceneProfile = new CreateSceneDto(
+            SceneProfile.Name,
+            SceneProfile.Address,
+            SceneProfile.VenueType,
+            SceneProfile.ContactInfo,
+            SceneProfile.Capacity,
+            SceneProfile.Bio,
+            SceneProfile.Description,
+            SceneProfile.Amenities,
+            SceneProfile.OpeningHours,
+            true
+            );
 
-          await _sceneService.CreateAsync(user.Id, sceneProfile);
+          await _sceneService.CreateAsync(user.Id, sceneProfile, SceneProfile.Genres);
         }
         else if (role == "Manager")
         {
           // Save Manager Profile
-          // Implement logic to create and associate a ManagementProfile with the user
-          ManagerProfileDto managementProfile = FromViewModel(ManagerProfile);
+          // Implement logic to create and associate a ManagerProfile with the user
+          CreateManagerDto managerProfile = new CreateManagerDto(
+            ManagerProfile.Name,
+            ManagerProfile.Description,
+            ManagerProfile.Location,
+            true
+            );
 
-          await _managementService.CreateAsync(user.Id, managementProfile);
+          await _managementService.CreateAsync(user.Id, managerProfile);
         }
-
-        var result = await _userManager.UpdateAsync(user);
-        if (result.Succeeded)
+        if (result)
         {
           return RedirectToPage("/Index");
         }
 
-        foreach (var error in result.Errors)
-        {
-          ModelState.AddModelError(string.Empty, error.Description);
-        }
+        ModelState.AddModelError("UpdateUserError", $"Could not update User: {user.UserName}");
+
       }
+      */
 
       // If we got this far, something failed; redisplay form
       return Page();
@@ -175,50 +180,6 @@ namespace GigKompassen.Web.Areas.Identity.Pages.Account
     {
       var roles = await _userManager.GetRolesAsync(user);
       return roles.FirstOrDefault();
-    }
-    
-    private ArtistProfileDto FromViewModel(CreateArtistProfileViewModel viewModel)
-    {
-      ArtistProfileDto profile = new()
-      {
-        Name = viewModel.Name,
-        Location = viewModel.Location,
-        Bio = viewModel.Bio,
-        Description = viewModel.Description,
-        Availability = viewModel.Availability,
-        Genres = viewModel.Genres.Select(p => new GenreDto(p)).ToList(),
-        Members = viewModel.Members.Select(p => new ArtistMemberDto(p.Name, p.Role)).ToList()
-      };
-      return profile;
-    }
-
-    private SceneProfileDto FromViewModel(CreateSceneProfileViewModel viewModel)
-    {
-      SceneProfileDto profile = new()
-      {
-        Name = viewModel.VenueName,
-        Address = viewModel.Address,
-        VenueType = viewModel.VenueType,
-        ContactInfo = viewModel.ContactInfo,
-        Capacity = viewModel.Capacity,
-        Amenities = viewModel.Amenities,
-        Bio = viewModel.Bio,
-        Description = viewModel.Description,
-        OpeningHours = viewModel.OpeningHours,
-        Genres = viewModel.Genres.Select(p => new GenreDto(p)).ToList()
-      };
-      return profile;
-    }
-
-    private ManagerProfileDto FromViewModel(CreateManagementProfileViewModel viewModel)
-    {
-      ManagerProfileDto profile = new()
-      {
-        Name = viewModel.Name,
-        Description = viewModel.Description,
-        Location = viewModel.Location
-      };
-      return profile;
     }
   }
 }

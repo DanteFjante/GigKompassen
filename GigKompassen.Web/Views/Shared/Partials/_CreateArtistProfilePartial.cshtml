@@ -102,7 +102,6 @@
 <script>
   $(document).ready(function() {
     let genreIndex = $('#ArtistGenresTableBody tr').length;
-    let memberIndex = $('#ArtistMembersTableBody tr').length;
 
     $('#addArtistGenreButton').click(function() {
       // Create a new row
@@ -130,6 +129,16 @@
       // Increment genre index
       genreIndex++;
     });
+    
+    function updateGenreIndices() {
+      genreIndex = 0;
+      $('#ArtistGenresTableBody tr').each(function() {
+        $(this).find('input').attr('name', 'Genres[' + genreIndex + ']');
+        genreIndex++;
+      });
+    }
+
+    let memberIndex = $('#ArtistMembersTableBody tr').length;
 
     $('#addArtistMemberButton').click(function() {
       // Create a new row
@@ -163,14 +172,6 @@
       // Increment member index
       memberIndex++;
     });
-
-    function updateGenreIndices() {
-      genreIndex = 0;
-      $('#ArtistGenresTableBody tr').each(function() {
-        $(this).find('input').attr('name', 'Genres[' + genreIndex + ']');
-        genreIndex++;
-      });
-    }
 
     function updateGroupMemberIndices() {
       memberIndex = 0;

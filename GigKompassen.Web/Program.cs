@@ -2,7 +2,6 @@ using GigKompassen.Authorization.Policies.Handlers;
 using GigKompassen.Authorization.Policies.Requirements;
 using GigKompassen.Enums;
 using GigKompassen.Models.Accounts;
-using GigKompassen.Services;
 using GigKompassen.Settings;
 using GigKompassen.Data;
 
@@ -10,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
+using GigKompassen.Services;
 
 namespace GigKompassen.Web
 {
@@ -27,6 +27,7 @@ namespace GigKompassen.Web
           sqlOptions => sqlOptions.MigrationsAssembly(assemblyname))
           );
 
+
       builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
       {
         options.SignIn.RequireConfirmedAccount = true;
@@ -37,7 +38,7 @@ namespace GigKompassen.Web
       .AddDefaultUI()
       .AddDefaultTokenProviders();
 
-
+      builder.Services.AddServerSideBlazor();
 
       builder.Services.AddDatabaseDeveloperPageExceptionFilter();
       AddConfiguration(builder.Configuration, builder.Services);
@@ -95,18 +96,17 @@ namespace GigKompassen.Web
 
     public static void ConfigureServices(IServiceCollection services)
     {
-      services.AddTransient<IEmailSender, GmailService>();
+      services.AddTransient<IEmailSender<ApplicationUser>, GmailService>();
 
       services.AddScoped<IAuthorizationHandler, ProfileComleteHandler>();
 
-      services.AddTransient<IdentityProfileService>();
-      services.AddTransient<MediaService>();
-      services.AddTransient<GenreService>();
       services.AddTransient<ArtistService>();
-      services.AddTransient<ManagerProfileService>();
-      services.AddTransient<SceneProfileService>();
-    
-      
+      services.AddTransient<GenreService>();
+      services.AddTransient<ManagerService>();
+      services.AddTransient<MediaService>();
+      services.AddTransient<ProfileAccessService>();
+      services.AddTransient<SceneService>();
+      services.AddTransient<UserService>();
     }
 
     public static async Task CreateRoles(IServiceProvider serviceProvider)

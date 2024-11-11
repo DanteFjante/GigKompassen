@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GigKompassen.Web.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20241019233201_mssql.local_migration_440")]
-    partial class mssqllocal_migration_440
+    [Migration("20241028144351_mssql.local_migration_870")]
+    partial class mssqllocal_migration_870
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -298,13 +298,7 @@ namespace GigKompassen.Web.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("OwnerId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("OwnerId")
-                        .IsUnique();
 
                     b.ToTable("MediaGalleries");
                 });
@@ -321,7 +315,7 @@ namespace GigKompassen.Web.Migrations
                     b.Property<Guid?>("ChatId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("GalleryId")
+                    b.Property<Guid?>("GalleryId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("SceneProfileId")
@@ -336,6 +330,10 @@ namespace GigKompassen.Web.Migrations
                     b.HasIndex("ChatId")
                         .IsUnique()
                         .HasFilter("[ChatId] IS NOT NULL");
+
+                    b.HasIndex("GalleryId")
+                        .IsUnique()
+                        .HasFilter("[GalleryId] IS NOT NULL");
 
                     b.HasIndex("SceneProfileId")
                         .IsUnique()
@@ -449,6 +447,9 @@ namespace GigKompassen.Web.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("ProfileType")
                         .HasColumnType("int");
 
@@ -456,6 +457,8 @@ namespace GigKompassen.Web.Migrations
                         .HasColumnType("bit");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("Profiles");
 
@@ -572,7 +575,6 @@ namespace GigKompassen.Web.Migrations
                     b.HasBaseType("GigKompassen.Models.Chats.MessageContent");
 
                     b.Property<string>("Comment")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("MediaLinkId")
@@ -724,13 +726,13 @@ namespace GigKompassen.Web.Migrations
                     b.HasOne("GigKompassen.Models.Profiles.Profile", "Profile")
                         .WithMany("ProfileAccesses")
                         .HasForeignKey("ProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("GigKompassen.Models.Accounts.ApplicationUser", "User")
-                        .WithMany("Profiles")
+                        .WithMany("ProfileAccesses")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Profile");
@@ -743,24 +745,24 @@ namespace GigKompassen.Web.Migrations
                     b.HasOne("GigKompassen.Models.Chats.Chat", "Chat")
                         .WithMany("Messages")
                         .HasForeignKey("ChatId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("GigKompassen.Models.Chats.MessageContent", "Content")
                         .WithOne()
                         .HasForeignKey("GigKompassen.Models.Chats.ChatMessage", "ContentId")
-                        .OnDelete(DeleteBehavior.SetNull)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("GigKompassen.Models.Chats.ChatMessage", "ReplyTo")
                         .WithOne()
                         .HasForeignKey("GigKompassen.Models.Chats.ChatMessage", "ReplyToId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("GigKompassen.Models.Chats.ChatParticipant", "Sender")
                         .WithMany("Messages")
                         .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Chat");
@@ -777,18 +779,18 @@ namespace GigKompassen.Web.Migrations
                     b.HasOne("GigKompassen.Models.Chats.Chat", "Chat")
                         .WithMany("Participants")
                         .HasForeignKey("ChatId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("GigKompassen.Models.Chats.ChatMessage", "LastRead")
                         .WithOne()
                         .HasForeignKey("GigKompassen.Models.Chats.ChatParticipant", "LastReadId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("GigKompassen.Models.Accounts.ApplicationUser", "User")
                         .WithMany("ChatParticipations")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Chat");
@@ -798,37 +800,33 @@ namespace GigKompassen.Web.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("GigKompassen.Models.Media.MediaGallery", b =>
-                {
-                    b.HasOne("GigKompassen.Models.Media.MediaGalleryOwner", "Owner")
-                        .WithOne("Gallery")
-                        .HasForeignKey("GigKompassen.Models.Media.MediaGallery", "OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Owner");
-                });
-
             modelBuilder.Entity("GigKompassen.Models.Media.MediaGalleryOwner", b =>
                 {
                     b.HasOne("GigKompassen.Models.Profiles.ArtistProfile", "ArtistProfile")
-                        .WithOne("Gallery")
+                        .WithOne("GalleryOwner")
                         .HasForeignKey("GigKompassen.Models.Media.MediaGalleryOwner", "ArtistProfileId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("GigKompassen.Models.Chats.Chat", "Chat")
-                        .WithOne("Gallery")
+                        .WithOne("GalleryOwner")
                         .HasForeignKey("GigKompassen.Models.Media.MediaGalleryOwner", "ChatId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("GigKompassen.Models.Media.MediaGallery", "Gallery")
+                        .WithOne("Owner")
+                        .HasForeignKey("GigKompassen.Models.Media.MediaGalleryOwner", "GalleryId")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("GigKompassen.Models.Profiles.SceneProfile", "SceneProfile")
-                        .WithOne("Gallery")
+                        .WithOne("GalleryOwner")
                         .HasForeignKey("GigKompassen.Models.Media.MediaGalleryOwner", "SceneProfileId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("ArtistProfile");
 
                     b.Navigation("Chat");
+
+                    b.Navigation("Gallery");
 
                     b.Navigation("SceneProfile");
                 });
@@ -838,13 +836,13 @@ namespace GigKompassen.Web.Migrations
                     b.HasOne("GigKompassen.Models.Media.MediaGallery", "Gallery")
                         .WithMany("Items")
                         .HasForeignKey("GalleryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("GigKompassen.Models.Media.MediaLink", "Link")
                         .WithOne()
                         .HasForeignKey("GigKompassen.Models.Media.MediaItem", "LinkId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Gallery");
@@ -857,7 +855,7 @@ namespace GigKompassen.Web.Migrations
                     b.HasOne("GigKompassen.Models.Accounts.ApplicationUser", "Uploader")
                         .WithMany("UploadedMedia")
                         .HasForeignKey("UploaderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Uploader");
@@ -868,10 +866,21 @@ namespace GigKompassen.Web.Migrations
                     b.HasOne("GigKompassen.Models.Profiles.ArtistProfile", "ArtistProfile")
                         .WithMany("Members")
                         .HasForeignKey("ArtistProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("ArtistProfile");
+                });
+
+            modelBuilder.Entity("GigKompassen.Models.Profiles.Profile", b =>
+                {
+                    b.HasOne("GigKompassen.Models.Accounts.ApplicationUser", "Owner")
+                        .WithMany("OwnedProfiles")
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -927,27 +936,29 @@ namespace GigKompassen.Web.Migrations
 
             modelBuilder.Entity("GigKompassen.Models.Chats.MessageMediaContent", b =>
                 {
-                    b.HasOne("GigKompassen.Models.Media.MediaLink", "Media")
+                    b.HasOne("GigKompassen.Models.Media.MediaLink", "MediaLink")
                         .WithOne()
                         .HasForeignKey("GigKompassen.Models.Chats.MessageMediaContent", "MediaLinkId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.Navigation("Media");
+                    b.Navigation("MediaLink");
                 });
 
             modelBuilder.Entity("GigKompassen.Models.Accounts.ApplicationUser", b =>
                 {
                     b.Navigation("ChatParticipations");
 
-                    b.Navigation("Profiles");
+                    b.Navigation("OwnedProfiles");
+
+                    b.Navigation("ProfileAccesses");
 
                     b.Navigation("UploadedMedia");
                 });
 
             modelBuilder.Entity("GigKompassen.Models.Chats.Chat", b =>
                 {
-                    b.Navigation("Gallery");
+                    b.Navigation("GalleryOwner");
 
                     b.Navigation("Messages");
 
@@ -962,12 +973,8 @@ namespace GigKompassen.Web.Migrations
             modelBuilder.Entity("GigKompassen.Models.Media.MediaGallery", b =>
                 {
                     b.Navigation("Items");
-                });
 
-            modelBuilder.Entity("GigKompassen.Models.Media.MediaGalleryOwner", b =>
-                {
-                    b.Navigation("Gallery")
-                        .IsRequired();
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("GigKompassen.Models.Profiles.Profile", b =>
@@ -977,14 +984,14 @@ namespace GigKompassen.Web.Migrations
 
             modelBuilder.Entity("GigKompassen.Models.Profiles.ArtistProfile", b =>
                 {
-                    b.Navigation("Gallery");
+                    b.Navigation("GalleryOwner");
 
                     b.Navigation("Members");
                 });
 
             modelBuilder.Entity("GigKompassen.Models.Profiles.SceneProfile", b =>
                 {
-                    b.Navigation("Gallery");
+                    b.Navigation("GalleryOwner");
                 });
 #pragma warning restore 612, 618
         }
