@@ -3,17 +3,25 @@ using GigKompassen.Models.Profiles;
 
 using Microsoft.EntityFrameworkCore;
 
+using static GigKompassen.Misc.AsyncEventsHelper;
+
 namespace GigKompassen.Services
 {
   public class GenreService
   {
     private readonly ApplicationDbContext _context;
 
+    public event AsyncEventHandler<Genre> OnGenreCreated;
+    public event AsyncEventHandler<List<Genre>> OnGenresCreated;
+    public event AsyncEventHandler<Genre> OnGenreRemoved;
+    public event AsyncEventHandler<List<Genre>> OnGenresRemoved;
+
     public GenreService(ApplicationDbContext context)
     {
       _context = context;
     }
 
+    #region HasGenre
     public async Task<bool> HasGenreAsync(string genre)
     {
       return await _context.Genres.AnyAsync(g => g.Name.Equals(genre));
@@ -23,135 +31,165 @@ namespace GigKompassen.Services
     {
       return await _context.Genres.AnyAsync(g => g.Id == id);
     }
+    #endregion
 
-    public async Task<Genre?> GetGenreAsync(Guid id, GenreQueryOptions? options = null)
+    #region Getters
+    public async Task<Genre?> GetGenreAsync(Guid id)
     {
-      var query = _context.Genres.AsQueryable();
-
-      if (options != null)
-      {
-        query = options.Apply(query);
-      }
-
-      return await query.FirstOrDefaultAsync(g => g.Id == id);
+      return await _context.Genres.FirstOrDefaultAsync(g => g.Id == id);
     }
 
-    public async Task<Genre?> GetGenreAsync(string genre, GenreQueryOptions? options = null)
+    public async Task<Genre?> GetGenreAsync(string genre)
     {
-      var query = _context.Genres.AsQueryable();
-
-      if (options != null)
-      {
-        query = options.Apply(query);
-      }
-      return await query.FirstOrDefaultAsync(g => g.Name.Equals(genre));
+      return await _context.Genres.FirstOrDefaultAsync(g => g.Name.Equals(genre));
     }
 
-    public async Task<List<Genre>> GetGenresAsync(IEnumerable<string> genres, GenreQueryOptions? options = null)
+    public async Task<List<Genre>> GetGenresAsync(IEnumerable<Guid> genres)
     {
-      var query = _context.Genres.AsQueryable();
-      if (options != null)
-      {
-        query = options.Apply(query);
-      }
-      return await query.Where(g => genres.Any(s => s.Equals(g.Name))).ToListAsync();
+      return await _context.Genres.Where(g => genres.Contains(g.Id)).ToListAsync();
     }
 
-    public async Task<Genre?> AddOrGetGenreAsync(string genre, GenreQueryOptions? options = null)
+    public async Task<List<Genre>> GetGenresAsync(IEnumerable<string> genres)
     {
-
-      if (!await HasGenreAsync(genre))
-      {
-        await _context.AddAsync(new Genre { Name = genre });
-        await _context.SaveChangesAsync();
-      }
-
-      return await GetGenreAsync(genre, options);
+      return await _context.Genres.Where(g => genres.Contains(g.Name)).ToListAsync();
     }
 
-    public async Task<List<Genre>> AddOrGetGenresAsync(IEnumerable<string> genres, GenreQueryOptions? options = null)
+    #endregion
+
+    #region Creators
+    public async Task<Genre> CreateGenreAsync(string genreName)
     {
-      var query = _context.Genres.AsQueryable();
+      Genre genre = new Genre() { Id = Guid.NewGuid(), Name = genreName};
 
-      if(options != null)
+      if(await _context.Genres.AnyAsync(g => g.Name.Equals(genreName)))
+        throw new ArgumentException("Genre already exists", nameof(genreName));
+
+      await _context.Genres.AddAsync(genre);
+      if(await _context.SaveChangesAsync() == 0)
+        throw new DbUpdateException("Failed to create genre");
+
+      if(OnGenreCreated != null)
+        await OnGenreCreated.InvokeAsync(this, genre);
+
+      return genre;
+    }
+
+    public async Task<List<Genre>> CreateGenresAsync(IEnumerable<string> genreNames)
+    {
+      List<Genre> genres = new List<Genre>();
+      foreach(string genreName in genreNames)
       {
-        query = options.Apply(query);
+        if(_context.Genres.Any(g => g.Name.Equals(genreName)))
+          continue;
+        Genre genre = new Genre() { Id = Guid.NewGuid(), Name = genreName };
+        await _context.Genres.AddAsync(genre);
+        genres.Add(genre);
       }
-
-      var existingGenres = await query.Where(g => genres.Any(s => s.Equals(g.Name))).ToListAsync();
-
-      var newGenres = genres.Except(existingGenres
-        .Select(p => p.Name))
-        .Select(p => 
-          new Genre() 
-          {
-            Id = Guid.NewGuid(),
-            Name = p
-          })
-      .ToList();
-
-      await Task.WhenAll(newGenres.Select(async g => await _context.Genres.AddAsync(g)));
       await _context.SaveChangesAsync();
+      
+      if (OnGenresCreated != null)
+        await OnGenresCreated.InvokeAsync(this, genres);
 
-      return await GetGenresAsync(genres, options);
+      return genres;
     }
 
+    public async Task<Genre> GetOrCreateGenreAsync(string genreName)
+    {
+      Genre? genre = await GetGenreAsync(genreName);
+      if (genre != null)
+        return genre;
+
+      return await CreateGenreAsync(genreName);
+    }
+
+    public async Task<List<Genre>> GetOrCreateGenresAsync(IEnumerable<string> genres)
+    {
+      var existingGenres = await GetGenresAsync(genres);
+
+      var newGenres = await CreateGenresAsync(genres);
+
+      return existingGenres.Concat(newGenres).ToList();
+    }
+    #endregion
+
+    #region Deleters
     public async Task<bool> RemoveGenreAsync(Guid id)
     {
-      if(!await HasGenreAsync(id))
-        return false;
       Genre? toRemove = await GetGenreAsync(id);
+      if (toRemove == null)
+        return false;
+
       _context.Genres.Remove(toRemove!);
-      await _context.SaveChangesAsync();
-      return true;
+      var result = await _context.SaveChangesAsync();
+
+      if (result == 1 && OnGenreRemoved != null)
+        await OnGenreRemoved.InvokeAsync(this, toRemove!);
+
+      return result == 1;
+    }
+
+    public async Task<int> RemoveGenresAsync(IEnumerable<Guid> ids)
+    {
+      var existingGenres = await GetGenresAsync(ids);
+
+      _context.Genres.RemoveRange(existingGenres);
+      var result = await _context.SaveChangesAsync();
+
+      if (result > 0 && OnGenresRemoved != null)
+        await OnGenresRemoved.InvokeAsync(this, existingGenres);
+
+      return result;
     }
 
     public async Task<bool> RemoveGenreAsync(string name)
     {
-      if (!await HasGenreAsync(name))
-        return false;
       Genre? toRemove = await GetGenreAsync(name);
+      if (toRemove == null)
+        return false;
+
       _context.Genres.Remove(toRemove!);
-      await _context.SaveChangesAsync();
-      return true;
+      var result = await _context.SaveChangesAsync();
+
+      if (result == 1 && OnGenreRemoved != null)
+        await OnGenreRemoved.InvokeAsync(this, toRemove!);
+
+      return result == 1;
     }
 
-    public async Task RemoveGenresAsync(IEnumerable<string> genres)
+    public async Task<int> RemoveGenresAsync(IEnumerable<string> genres)
     {
-      var existingGenres = await _context.Genres.Where(g => genres.Any(s => s.Equals(g.Name))).ToListAsync();
+      var existingGenres = await GetGenresAsync(genres);
       _context.Genres.RemoveRange(existingGenres);
-      await _context.SaveChangesAsync();
+
+      var result = await _context.SaveChangesAsync();
+      if (result > 0 && OnGenresRemoved != null)
+        await OnGenresRemoved.InvokeAsync(this, existingGenres);
+
+      return result;
     }
 
-    public async Task RemoveGenresAsync(IEnumerable<Guid> ids)
+    public async Task<bool> RemoveGenreAsync(Genre genre)
     {
-      var existingGenres = await _context.Genres.Where(g => ids.Contains(g.Id)).ToListAsync();
-      _context.Genres.RemoveRange(existingGenres);
-      await _context.SaveChangesAsync();
+      _context.Genres.Remove(genre);
+      var result = await _context.SaveChangesAsync();
+
+      if (result == 1 && OnGenreRemoved != null)
+        await OnGenreRemoved.InvokeAsync(this, genre);
+
+      return result == 1;
     }
 
-  }
-
-  public class GenreQueryOptions
-  {
-    public bool IncludeArtistProfiles { get; set; }
-    public bool IncludeSceneProfiles { get; set; }
-
-    public GenreQueryOptions(bool includeArtistProfiles = false, bool includeSceneProfiles = false)
+    public async Task<int> RemoveGenresAsync(IEnumerable<Genre> genres)
     {
-      IncludeArtistProfiles = includeArtistProfiles;
-      IncludeSceneProfiles = includeSceneProfiles;
+      _context.Genres.RemoveRange(genres);
+
+      var result = await _context.SaveChangesAsync();
+
+      if (result > 0 && OnGenresRemoved != null)
+        await OnGenresRemoved.InvokeAsync(this, genres.ToList());
+
+      return result;
     }
-
-    public IQueryable<Genre> Apply(IQueryable<Genre> query)
-    {
-      if (IncludeArtistProfiles)
-        query = query.Include(g => g.ArtistProfiles);
-
-      if (IncludeSceneProfiles)
-        query = query.Include(g => g.SceneProfiles);
-
-      return query;
-    }
+    #endregion
   }
 }

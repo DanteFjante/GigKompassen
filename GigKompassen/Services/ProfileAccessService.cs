@@ -5,142 +5,198 @@ using GigKompassen.Models.Profiles;
 
 using Microsoft.EntityFrameworkCore;
 
+using static GigKompassen.Misc.AsyncEventsHelper;
+
 namespace GigKompassen.Services
 {
   public class ProfileAccessService
   {
     private readonly ApplicationDbContext _context;
-    public ProfileAccessService(ApplicationDbContext context) 
+    private readonly UserService _userService;
+    private readonly ArtistService _artistService;
+    private readonly SceneService _sceneService;
+    private readonly ManagerService _managerService;
+
+    public event AsyncEventHandler<ProfileAccess> OnAddAuthorization;
+    public event AsyncEventHandler<ProfileAccess> OnRemoveAuthorization;
+    public event AsyncEventHandler<List<ProfileAccess>> OnRemoveAuthorizations;
+    public event AsyncEventHandler<BaseProfile> OnSetProfileOwner;
+
+    public ProfileAccessService(ApplicationDbContext context, UserService userService, ArtistService artistService, SceneService sceneService, ManagerService managerService) 
     {
       _context = context;
+      _userService = userService;
+      _artistService = artistService;
+      _sceneService = sceneService;
+      _managerService = managerService;
+
+      _userService.OnDeleteUser += async (sender, user) => await ClearAuthorizationsFromUserAsync(user.Id);
+      _artistService.OnDeleteArtistProfile += async (sender, artist) => await ClearAuthorizationsFromProfileAsync(artist.Id);
+      _sceneService.OnDeleteSceneProfile += async (sender, scene) => await ClearAuthorizationsFromProfileAsync(scene.Id);
+      _managerService.OnDeleteManagerProfile += async (sender, manager) => await ClearAuthorizationsFromProfileAsync(manager.Id);
+
     }
 
-    public async Task<bool> CanAccessProfile(Guid profileId, Guid userId, AccessType accessType)
+    public async Task<bool> CanAccessProfileAsync(Guid userId, Guid profileId, AccessType accessType)
     {
-      bool any = _context.Profiles.Any(p => p.Id == profileId);
-      bool any2 = _context.Users.Any(p => p.Id == userId);
-      Profile? profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Id == profileId);
+      var user = await _context.Users.FirstOrDefaultAsync(p => p.Id == userId);
+      if(user == null)
+        throw new KeyNotFoundException("User not found");
+
+      var profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Id == profileId);
       if (profile == null)
-      {
-        return false;
-      }
+        throw new KeyNotFoundException("Profile not found");
+
+      if(profile.Owner?.Id == userId)
+        return true;
 
       if(accessType == AccessType.View && profile.Public)
       {
         return true;
       }
 
-      if (profile.Owner?.Id == userId)
-        return true;
+      List<ProfileAccess> accessList = await _context.ProfileAccesses.Where(p => p.UserId == userId && p.ProfileId == profileId).ToListAsync();
 
-      if(profile.ProfileAccesses != null && profile.ProfileAccesses.Any(p => p.UserId == userId && p.AccessType == accessType))
-      {
-        return true;
-      }
-
-      return false;
+      return accessList.Any(p => p.AccessType == accessType);
     }
 
-    public async Task<bool> AddProfileAuthorization(Guid profileId, Guid userId, AccessType accessType)
+    public async Task<ProfileAccess> AddProfileAuthorizationAsync(Guid userId, Guid profileId, AccessType accessType)
     {
-      var hasUser = await _context.Users.AnyAsync(p => p.Id == userId);
-      var hasProfile = await _context.Profiles.AnyAsync(p => p.Id == profileId);
+      var user = await _context.Users.FirstOrDefaultAsync(p => p.Id == userId);
+      if (user == null)
+        throw new KeyNotFoundException("User not found");
 
-      if (!hasUser || !hasProfile)
-      {
-        return false;
-      }
+      var profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Id == profileId);
+      if (profile == null)
+        throw new KeyNotFoundException("Profile not found");
 
-      var profileAccess = new ProfileAccess
+      var profileAccess = new ProfileAccess()
       {
+        Id = Guid.NewGuid(),
+        AccessType = accessType,
         ProfileId = profileId,
+        Profile = profile,
         UserId = userId,
-        AccessType = accessType
+        User = user
       };
 
+      if(OnAddAuthorization != null)
+        await OnAddAuthorization.InvokeAsync(this, profileAccess);
+
       _context.ProfileAccesses.Add(profileAccess);
-      await _context.SaveChangesAsync();
-      return true;
+
+      if (await _context.SaveChangesAsync() == 0)
+        throw new DbUpdateException("Failed to add ProfileAccess");
+
+      return profileAccess;
     }
 
-    public async Task<bool> RemoveAuthorization(Profile profile, ApplicationUser user)
+    public async Task<bool> RemoveAuthorizationAsync(Guid userId, Guid profileId)
     {
-      var auths = await _context.ProfileAccesses.Where(p => p.UserId == user.Id && p.ProfileId == profile.Id).ToListAsync();
-      if(auths == null)
+      if (!_context.Users.Any(p => p.Id == userId))
+        throw new KeyNotFoundException("User not found");
+
+      if (!_context.Profiles.Any(p => p.Id == profileId))
+        throw new KeyNotFoundException("Profile not found");
+
+      var auths = await _context.ProfileAccesses.Where(p => p.UserId == userId && p.ProfileId == profileId).ToListAsync();
+      if(auths == null || !auths.Any())
       {
         return false;
       }
+
+      if(OnRemoveAuthorization != null)
+        await OnRemoveAuthorizations.InvokeAsync(this, auths);
+
       _context.ProfileAccesses.RemoveRange(auths);
       return await _context.SaveChangesAsync() > 0;
     }
 
-    public async Task<bool> RemoveAuthorization(Profile profile, ApplicationUser user, AccessType accessType)
+    public async Task<bool> RemoveAuthorizationAsync(Guid userId, Guid profileId, AccessType accessType)
     {
-      var auths = await _context.ProfileAccesses.Where(p => p.ProfileId == profile.Id && p.UserId == user.Id && p.AccessType == accessType).ToListAsync();
-      if (auths == null)
+      if (!_context.Users.Any(p => p.Id == userId))
+        throw new KeyNotFoundException("User not found");
+
+      if (!_context.Profiles.Any(p => p.Id == profileId))
+        throw new KeyNotFoundException("Profile not found");
+
+      var auths = await _context.ProfileAccesses.Where(p => p.ProfileId == profileId && p.UserId == userId && p.AccessType == accessType).ToListAsync();
+      if (auths == null || !auths.Any())
       {
         return false;
       }
+
+      if(OnRemoveAuthorizations != null)
+        await OnRemoveAuthorizations.InvokeAsync(this, auths);
+
       _context.ProfileAccesses.RemoveRange(auths);
       return await _context.SaveChangesAsync() > 0;
     }
 
-    public async Task<bool> RemoveAuthorization(Guid profileAccessId)
+    public async Task<bool> RemoveAuthorizationAsync(Guid profileAccessId)
     {
       var profileAccess = await _context.ProfileAccesses.FirstOrDefaultAsync(p => p.Id == profileAccessId);
       if (profileAccess == null)
       {
         return false;
       }
+
+      if (OnRemoveAuthorization != null)
+        await OnRemoveAuthorization.InvokeAsync(this, profileAccess);
+
       _context.ProfileAccesses.Remove(profileAccess);
       int result = await _context.SaveChangesAsync();
       return result == 1;
     }
 
-    public async Task<bool> ClearAuthorizations(Profile profile)
+    public async Task<bool> ClearAuthorizationsFromProfileAsync(Guid profileId)
     {
-      var auths = await _context.ProfileAccesses.Where(p => p.ProfileId == profile.Id).ToListAsync();
-      if (auths == null)
+
+      var auths = await _context.ProfileAccesses.Where(p => p.ProfileId == profileId).ToListAsync();
+      if (auths == null || !auths.Any())
       {
         return false;
       }
+
+      if(OnRemoveAuthorizations != null)
+        await OnRemoveAuthorizations.InvokeAsync(this, auths);
+
       _context.ProfileAccesses.RemoveRange(auths);
       return await _context.SaveChangesAsync() > 0;
     }
 
-    public async Task<bool> ClearAuthorizations(ApplicationUser user)
+    public async Task<bool> ClearAuthorizationsFromUserAsync(Guid userId)
     {
-      var auths = await _context.ProfileAccesses.Where(p => p.UserId == user.Id).ToListAsync();
-      if (auths == null)
+      var auths = await _context.ProfileAccesses.Where(p => p.UserId == userId).ToListAsync();
+      if (auths == null || !auths.Any())
       {
         return false;
       }
+      if(OnRemoveAuthorizations != null)
+        await OnRemoveAuthorizations.InvokeAsync(this, auths);
+
       _context.ProfileAccesses.RemoveRange(auths);
       return await _context.SaveChangesAsync() > 0;
     }
 
-    public async Task<bool> SetProfileOwner(Profile profile, ApplicationUser user)
+    public async Task<bool> SetProfileOwnerAsync(Guid userId, Guid profileId)
     {
-      ApplicationUser? _user = await _context.Users.Include(p => p.OwnedProfiles).FirstOrDefaultAsync(p => p.Id == user.Id);
-      Profile? _profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Id == profile.Id);
-      if (_profile == null || _user == null)
-      {
-        return false;
-      }
-      ApplicationUser? currentUser = _profile.Owner;
-      if (currentUser != null && currentUser.OwnedProfiles != null)
-      {
-        currentUser.OwnedProfiles.Remove(_profile);
-        _context.Users.Update(currentUser);
-      }
-      _profile.Owner = user;
-      _context.Profiles.Update(_profile);
-      if (user.OwnedProfiles != null)
-      {
-        user.OwnedProfiles.Add(_profile);
-        _context.Users.Update(_user);
-      }
-      await _context.SaveChangesAsync();
+      ApplicationUser? user = await _context.Users.FirstOrDefaultAsync(p => p.Id == userId);
+      if(user == null)
+        throw new KeyNotFoundException("User not found");
+
+      BaseProfile? profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Id == profileId);
+      if (profile == null)
+        throw new KeyNotFoundException("Profile not found");
+
+      profile.Owner = user;
+
+      if(OnSetProfileOwner != null)
+        await OnSetProfileOwner.InvokeAsync(this, profile);
+
+      if(await _context.SaveChangesAsync() == 0)
+        throw new DbUpdateException("Failed to set Profile Owner");
+
       return true;
     }
 

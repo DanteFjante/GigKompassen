@@ -1,290 +1,545 @@
 ﻿using GigKompassen.Data;
-using GigKompassen.Dto.Profiles;
+using GigKompassen.Enums;
+using GigKompassen.Models.Media;
 using GigKompassen.Models.Profiles;
 
 using Microsoft.EntityFrameworkCore;
+
+using static GigKompassen.Misc.AsyncEventsHelper;
 
 namespace GigKompassen.Services
 {
   public class ArtistService
   {
+
+    public delegate void GenreEventHandler(object? sender, ArtistProfile artistProfile, Genre genre);
+    public delegate void GenresEventHandler(object? sender, ArtistProfile artistProfile, List<Genre> genres);
+
     private readonly ApplicationDbContext _context;
-    private readonly MediaService _mediaService;
+    private readonly UserService _userService;
     private readonly GenreService _genreService;
+    private readonly MediaService _mediaService;
+
+    // Events
+    public event AsyncEventHandler<ArtistProfile> OnCreateArtistProfile;
+    public event AsyncEventHandler<ArtistProfile> OnUpdateArtistProfile;
+    public event AsyncEventHandler<ArtistProfile> OnDeleteArtistProfile;
+    public event AsyncEventHandler<ArtistMember> OnAddArtistMember;
+    public event AsyncEventHandler<ArtistMember> OnUpdateArtistMember;
+    public event AsyncEventHandler<ArtistMember> OnRemoveArtistMember;
+    public event AsyncEventHandler<GenreEventArgs> OnAddGenre;
+    public event AsyncEventHandler<GenresEventArgs> OnAddGenres;
+    public event AsyncEventHandler<GenreEventArgs> OnRemoveGenre;
+    public event AsyncEventHandler<GenresEventArgs> OnRemoveGenres;
 
 
-    public ArtistService(ApplicationDbContext context, MediaService mediaService, GenreService genreService)
+    public ArtistService(ApplicationDbContext context, UserService userService, GenreService genreService, MediaService mediaService)
     {
       _context = context;
-      _mediaService = mediaService;
+      _userService = userService;
       _genreService = genreService;
-    }
+      _mediaService = mediaService;
 
-    public async Task<List<ArtistProfile>> GetAllAsync(ArtistProfileQueryOptions? options = null)
-    {
-
-      var query = _context.ArtistProfiles.IgnoreAutoIncludes().AsQueryable();
-
-      if (options != null)
+      if (_userService != null)
       {
-        query = options.Apply(query);
+        _userService.OnDeleteUser += async (sender, user) =>
+        {
+          var profiles = await GetArtistProfilesOwnerByUserAsync(user.Id);
+          await Task.WhenAll(profiles.Select(p => DeleteAsync(p.Id)));
+        };
       }
 
-      var artistProfiles = await query.ToListAsync();
+    }
+
+    #region Getters
+    public async Task<List<ArtistProfile>> GetAllAsync()
+    {
+      var artistProfiles = await _context.ArtistProfiles.ToListAsync();
 
       return artistProfiles;
     }
 
 
-    public async Task<ArtistProfile?> GetAsync(Guid id, ArtistProfileQueryOptions? options = null)
+    public async Task<ArtistProfile?> GetAsync(Guid id)
     {
-      var query = _context.ArtistProfiles.AsQueryable();
-
-      if (options != null)
-      {
-        query = options.Apply(query);
-      }
-
-      var artistProfile = await query.FirstOrDefaultAsync(ap => ap.Id == id);
+      var artistProfile = await _context.ArtistProfiles.FirstOrDefaultAsync(ap => ap.Id == id);
 
       if (artistProfile == null)
         return null;
 
-      // Map domain model to DTO
       return artistProfile;
     }
 
-    public async Task<ArtistProfile> CreateAsync(Guid userId, ArtistProfileDto artistProfileDto)
+    public async Task<List<ArtistProfile>> GetArtistProfilesUsingGenre(string genreName)
+    {
+      var genre = await _genreService.GetGenreAsync(genreName);
+      if (genre == null)
+        throw new KeyNotFoundException("Genre not found");
+
+      return await GetArtistProfilesUsingGenre(genre);
+    }
+
+    public async Task<List<ArtistProfile>> GetArtistProfilesUsingGenre(Guid genreId)
+    {
+      var genre = await _genreService.GetGenreAsync(genreId);
+      if (genre == null)
+        throw new KeyNotFoundException("Genre not found");
+
+      return await GetArtistProfilesUsingGenre(genre);
+    }
+
+    public async Task<List<ArtistProfile>> GetArtistProfilesUsingGenre(Genre genre)
+    {
+      return await _context.ArtistProfiles
+                .Include(ap => ap.Genres)
+                .Where(ap => ap.Genres.Contains(genre))
+                .ToListAsync();
+    }
+
+    public async Task<List<ArtistProfile>> GetArtistProfilesOwnerByUserAsync(Guid userId)
+    {
+      if (!await _context.Users.AnyAsync(p => p.Id == userId))
+        throw new KeyNotFoundException("User not found");
+
+      return await _context.ArtistProfiles.Where(p => p.OwnerId == userId).ToListAsync();
+    }
+    #endregion
+
+    #region Creators
+    public async Task<ArtistProfile> CreateAsync(Guid applicationUserId, CreateArtistDto artistProfileDto, List<string>? genres = null, List<ArtistMemberDto>? members = null)
     {
       if (artistProfileDto == null)
         throw new ArgumentNullException(nameof(artistProfileDto));
 
-      if (string.IsNullOrWhiteSpace(artistProfileDto.Name))
-        throw new ArgumentException("Name is required.", nameof(artistProfileDto.Name));
-
-      var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
-
+      var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == applicationUserId);
       if (user == null)
         throw new KeyNotFoundException("User not found");
 
-      var profile = await FromDtoAsync(artistProfileDto);
-      profile.OwnerId = userId;
+      ArtistProfile profile = artistProfileDto.ToArtistProfile();
+      profile.OwnerId = user.Id;
       profile.Owner = user;
+
+      if (genres != null && genres.Any())
+      {
+        var genreList = await _genreService.GetOrCreateGenresAsync(genres);
+        profile.Genres!.AddRange(genreList);
+      }
+
+      if (members != null && members.Any())
+      {
+        profile.Members!.AddRange(members.Select(m => m.ToArtistMember(profile)));
+      }
+
+      MediaGalleryOwner mediaGalleryOwner = new MediaGalleryOwner()
+      {
+        Id = Guid.NewGuid(),
+        Galleries = new List<MediaGallery>(),
+      };
+
+      profile.MediaGalleryOwnerId = mediaGalleryOwner.Id;
+      profile.MediaGalleryOwner = mediaGalleryOwner;
+
+      if(OnCreateArtistProfile != null)
+        await OnCreateArtistProfile.InvokeAsync(this, profile);
+
       await _context.ArtistProfiles.AddAsync(profile);
-      user.OwnedProfiles?.Add(profile);
-      await _context.SaveChangesAsync();
-      var galleryOwner = await _mediaService.CreateGalleryOwnerAsync(profile);
-      profile.GalleryOwner = galleryOwner;
+      if(await _context.SaveChangesAsync() == 0)
+        throw new DbUpdateException("Failed to create ArtistProfile");
+
       return profile;
     }
+    #endregion
 
-    public async Task<ArtistProfile> UpdateAsync(Guid id, ArtistProfileDto artistProfileDto)
+    #region Updaters
+    public async Task<ArtistProfile> UpdateAsync(Guid id, UpdateArtistDto artistProfileDto, List<string>? genreNames = null, List<ArtistMemberDto>? members = null)
     {
+
       if (artistProfileDto == null)
         throw new ArgumentNullException(nameof(artistProfileDto));
 
-      var profile = await _context.ArtistProfiles
-          .Include(ap => ap.Genres)
-          .Include(ap => ap.Members)
-          .AsTracking()
-          .FirstOrDefaultAsync(ap => ap.Id == id);
-
-      if (profile == null)
+      ArtistProfile? profile = await _context.ArtistProfiles.AsTracking().Include(p => p.Members).Include(p => p.Genres).FirstOrDefaultAsync(p => p.Id == id);
+      if(profile == null)
         throw new KeyNotFoundException("ArtistProfile not found");
 
-      // Update properties
-      profile.Name = artistProfileDto.Name ?? profile.Name;
-      profile.Location = artistProfileDto.Location ?? profile.Location;
-      profile.Description = artistProfileDto.Description ?? profile.Description;
-      profile.Availability = artistProfileDto.Availability ?? profile.Availability;
-      profile.Bio = artistProfileDto.Bio ?? profile.Bio;
+      artistProfileDto.UpdateProfile(profile);
 
-      // Update Genres
-      if (artistProfileDto.Genres != null)
+      if (genreNames != null && genreNames.Any())
       {
-        var genreNames = artistProfileDto.Genres.Select(g => g.Name).ToList();
-
-        var genresToRemove = profile.Genres.Where(g => !genreNames.Contains(g.Name)).ToList();
-        var genresToAdd = await _genreService.AddOrGetGenresAsync(genreNames.Except(profile.Genres.Select(p => p.Name)));
-        
-        
-        foreach(var genre in genresToRemove)
+        List<string> GenresToRemove = new();
+        List<string> GenresToKeep = new();
+        List<string> NewGenres;
+        if (profile.Genres != null)
         {
-          profile.Genres.Remove(genre);
+          GenresToRemove = profile.Genres.Select(g => g.Name).SkipWhile(g => genreNames.Contains(g)).ToList();
+          GenresToKeep = profile.Genres.Select(g => g.Name).TakeWhile(g => genreNames.Contains(g)).ToList();
         }
-        
-        foreach (var genre in genresToAdd)
+
+        NewGenres = genreNames.Except(GenresToKeep).ToList();
+
+        foreach (var genreName in GenresToRemove)
         {
-          profile.Genres.Add(genre);
+          await RemoveGenreAsync(profile.Id, genreName);
+        }
+
+        foreach (var genreName in NewGenres)
+        {
+          await AddGenreAsync(profile.Id, genreName);
         }
       }
 
-      // Update Members
-      if (artistProfileDto.Members != null)
+      if (members != null && members.Any())
       {
-        var toAdd = artistProfileDto.Members
-          .Where(m => !profile.Members.Any(p => p.Name == m.Name && p.Role == m.Role))
-          .Select(m => new ArtistMember
-          {
-            Id = m.Id.HasValue ? m.Id.Value : Guid.NewGuid(),
-            Name = m.Name!,
-            Role = m.Role!
-          })
-          .ToList();
-
-        var toRemove = profile.Members
-          .Where(m => !artistProfileDto.Members.Any(p => p.Name == m.Name && p.Role == m.Role))
-          .ToList();
-
-        foreach (var member in toAdd)
+        var newMemberIds = members.Select(m => m.Id).ToList();
+        List<Guid> idsToRemove = new();
+        List<ArtistMemberDto> membersToUpdate = new();
+        List<ArtistMemberDto> membersToCreate = new();
+        if (profile.Members != null)
         {
-          profile.Members.Add(member);
-          _context.ArtistMembers.Add(member);
-        }
+          var currentIds = profile.Members.Select(m => m.Id).ToList();
+          idsToRemove = currentIds.SkipWhile(id => newMemberIds.Contains(id)).ToList();
 
-        
-        foreach (var member in toRemove)
-        {
-          profile.Members.Remove(member);
-          _context.ArtistMembers.Remove(member);
+          membersToUpdate = members.Where(m => m.Id.HasValue && currentIds.Contains(m.Id.Value)).ToList();
         }
-        
+        membersToCreate = members.Where(m => !membersToUpdate.Contains(m)).ToList();
+
+        foreach (var memberId in idsToRemove)
+        {
+          await RemoveMemberAsync(memberId);
+        }
+        foreach (var member in membersToUpdate)
+        {
+          await UpdateMemberAsync(member);
+        }
+        foreach (var member in membersToCreate)
+        {
+          await AddMemberAsync(profile.Id, member);
+        }
       }
 
-      await _context.SaveChangesAsync();
+      if(OnUpdateArtistProfile != null)
+        await OnUpdateArtistProfile.InvokeAsync(this, profile);
+
+      _context.ArtistProfiles.Update(profile);
+      var res = await _context.SaveChangesAsync();
+      if(res == 0)
+        throw new DbUpdateException("Failed to update ArtistProfile");
 
       return profile;
     }
+    #endregion
 
+    #region Deleters
     public async Task<bool> DeleteAsync(Guid id)
     {
       var artistProfile = await _context.ArtistProfiles
-          .Include(ap => ap.GalleryOwner)
           .FirstOrDefaultAsync(ap => ap.Id == id);
 
-      if (artistProfile != null)
-      {
-        if (artistProfile.GalleryOwner != null)
-        {
-          if (artistProfile.GalleryOwner.Gallery != null)
-            _context.MediaGalleries.Remove(artistProfile.GalleryOwner.Gallery);
-          _context.MediaGalleryOwners.Remove(artistProfile.GalleryOwner);
-        }
+      if (artistProfile == null)
+        return false;
+
+
+
+      if(artistProfile.Members != null && artistProfile.Members.Any())
         _context.ArtistMembers.RemoveRange(artistProfile.Members);
-        _context.ArtistProfiles.Remove(artistProfile);
-        await _context.SaveChangesAsync();
-        return true;
-      }
-      else
+
+      if(artistProfile.Genres != null && artistProfile.Genres.Any())
+        await RemoveGenresAsync(artistProfile.Id, artistProfile.Genres.Select(g => g.Name).ToList());
+
+      if (OnDeleteArtistProfile != null)
+        await OnDeleteArtistProfile.InvokeAsync(this, artistProfile);
+
+
+      _context.ArtistProfiles.Remove(artistProfile);
+
+      if(await _context.SaveChangesAsync() == 0)
+        throw new DbUpdateException("Failed to delete ArtistProfile");
+
+      if (artistProfile.MediaGalleryOwner != null)
       {
-        return false;
+        await _mediaService.DeleteMediaGalleryOwnerAsync(artistProfile.MediaGalleryOwner.Id);
       }
-    }
 
-    #region ArtistMembers
-    public async Task<ArtistMember> AddMember(Guid artistProfileId, ArtistMemberDto member)
-    {
-      ArtistMember newMember = new ArtistMember()
-      {
-        Id = Guid.NewGuid(),
-        Name = member.Name!,
-        Role = member.Role!,
-        ArtistProfileId = artistProfileId,
-      };
-      await _context.ArtistMembers.AddAsync(newMember);
-      await _context.SaveChangesAsync();
-      return newMember;
-    }
-
-    public async Task<bool> RemoveMember(Guid memberId)
-    {
-      var member = await _context.ArtistMembers.FirstOrDefaultAsync(m => m.Id == memberId);
-      if (member == null)
-        return false;
-      _context.ArtistMembers.Remove(member);
-      await _context.SaveChangesAsync();
-      return true;
-    }
-
-    public async Task<bool> UpdateMember(Guid memberId, ArtistMemberDto member)
-    {
-      var existingMember = await _context.ArtistMembers.FirstOrDefaultAsync(m => m.Id == memberId);
-      if (existingMember == null)
-        return false;
-
-      if (member.Name != null)
-        existingMember.Name = member.Name;
-
-      if (member.Role != null)
-        existingMember.Role = member.Role;
-
-      await _context.SaveChangesAsync();
       return true;
     }
     #endregion
 
-    private async Task<ArtistProfile> FromDtoAsync(ArtistProfileDto dto)
+    #region ArtistMembers
+    public async Task<ArtistMember> AddMemberAsync(Guid artistProfileId, ArtistMemberDto dto)
     {
-
       if (dto == null)
         throw new ArgumentNullException(nameof(dto));
 
-      if (string.IsNullOrWhiteSpace(dto.Name))
-        throw new ArgumentException("Name is required.", nameof(dto.Name));
+      ArtistProfile? artistProfile = await _context.ArtistProfiles
+          .Include(ap => ap.Members)
+          .FirstOrDefaultAsync(ap => ap.Id == artistProfileId);
+      if(artistProfile == null)
+        throw new KeyNotFoundException("ArtistProfile not found");
 
-      if (!dto.Availability.HasValue)
-        throw new ArgumentException("Availability is required.", nameof(dto.Availability));
+      ArtistMember newMember = dto.ToArtistMember(artistProfile);
 
-      Guid artistId = dto.Id.HasValue ? dto.Id.Value : Guid.NewGuid();
+      if(OnAddArtistMember != null)
+        await OnAddArtistMember.InvokeAsync(this, newMember);
 
-      List<Genre> genres = new List<Genre>();
-      if (dto.Genres != null && dto.Genres.Any())
+      await _context.ArtistMembers.AddAsync(newMember);
+
+      if(await _context.SaveChangesAsync() == 0)
+        throw new DbUpdateException("Failed to add ArtistMember");
+
+      return newMember;
+    }
+
+    public async Task<bool> UpdateMemberAsync(ArtistMemberDto dto)
+    {
+      if (dto == null)
+        throw new ArgumentNullException(nameof(dto));
+
+      if(!dto.Id.HasValue)
+        throw new ArgumentException("Id is required.", nameof(dto.Id));
+
+      var existingMember = await _context.ArtistMembers.FirstOrDefaultAsync(m => m.Id == dto.Id);
+      if (existingMember == null)
+        return false;
+
+      dto.UpdateArtistMember(existingMember);
+
+      if(OnUpdateArtistMember != null)
+        await OnUpdateArtistMember.InvokeAsync(this, existingMember);
+      
+      if(await _context.SaveChangesAsync() == 0)
+        throw new DbUpdateException("Failed to update ArtistMember");
+
+      return true;
+    }
+
+    public async Task<bool> RemoveMemberAsync(Guid memberId)
+    {
+      var member = await _context.ArtistMembers.FirstOrDefaultAsync(m => m.Id == memberId);
+      if (member == null)
+        return false;
+
+      if(OnRemoveArtistMember != null)
+        await OnRemoveArtistMember.InvokeAsync(this, member);
+      
+      _context.ArtistMembers.Remove(member);
+      if(await _context.SaveChangesAsync() == 0)
+        throw new DbUpdateException("Failed to remove ArtistMember");
+
+      return true;
+    }
+
+
+    #endregion
+
+    #region Genres
+    public async Task<Genre> AddGenreAsync(Guid artistProfileId, string genreName)
+    {
+      var artistProfile = await _context.ArtistProfiles
+          .Include(ap => ap.Genres)
+          .FirstOrDefaultAsync(ap => ap.Id == artistProfileId);
+
+      if (artistProfile == null)
+        throw new KeyNotFoundException("ArtistProfile not found");
+
+      var genre = await _genreService.GetOrCreateGenreAsync(genreName);
+
+      if(OnAddGenre != null)
+        await OnAddGenre.InvokeAsync(this, new(artistProfile, genre));
+
+      artistProfile.Genres!.Add(genre);
+      if(await _context.SaveChangesAsync() == 0)
+        throw new DbUpdateException("Failed to add Genre");
+
+      return genre;
+    }
+
+    public async Task<List<Genre>> AddGenresAsync(Guid artistProfileId, List<string> genreNames)
+    {
+      var artistProfile = await _context.ArtistProfiles
+          .Include(ap => ap.Genres)
+          .FirstOrDefaultAsync(ap => ap.Id == artistProfileId);
+
+      if (artistProfile == null)
+        throw new KeyNotFoundException("ArtistProfile not found");
+
+      var genres = await _genreService.GetOrCreateGenresAsync(genreNames);
+      
+      if(OnRemoveGenre != null)
+        await OnAddGenres.InvokeAsync(this, new(artistProfile, genres));
+
+      artistProfile.Genres!.AddRange(genres);
+      if(await _context.SaveChangesAsync() == 0)
+        throw new DbUpdateException("Failed to add Genres");
+
+      return genres;
+    }
+
+    public async Task<bool> RemoveGenreAsync(Guid artistProfileId, string genreName)
+    {
+      var artistProfile = await _context.ArtistProfiles
+          .Include(ap => ap.Genres)
+          .FirstOrDefaultAsync(ap => ap.Id == artistProfileId);
+
+      if (artistProfile == null)
+        throw new KeyNotFoundException("ArtistProfile not found");
+
+      var genre = await _genreService.GetGenreAsync(genreName);
+
+      if (genre == null || artistProfile.Genres == null || !artistProfile.Genres.Any())
+        return false;
+
+      if (artistProfile.Genres.Contains(genre))
       {
-        var genreNames = dto.Genres.Select(g => g.Name).ToList();
-        genres = await _genreService.AddOrGetGenresAsync(genreNames);
+        if(OnRemoveGenre != null)
+          await OnRemoveGenre.InvokeAsync(this, new(artistProfile, genre));
+        
+        artistProfile.Genres.Remove(genre);
+        if(await _context.SaveChangesAsync() == 0)
+          throw new DbUpdateException("Failed to remove Genre");
+      }
+      else
+        return false;
+
+      var artistProfilesUsingGenre = await GetArtistProfilesUsingGenre(genre);
+
+      if (!artistProfilesUsingGenre.Any())
+      {
+        await _genreService.RemoveGenreAsync(genre);
       }
 
-      List<ArtistMember> members = dto.Members?
-        .Where(m => !string.IsNullOrWhiteSpace(m.Name) && !string.IsNullOrWhiteSpace(m.Role))
-        .Select(m => new ArtistMember
-        {
-          Id = m.Id.HasValue ? m.Id.Value : Guid.NewGuid(),
-          Name = m.Name!,
-          Role = m.Role!,
-          ArtistProfileId = artistId
-        })
-        .ToList() ?? new List<ArtistMember>();
 
-      var profile = new ArtistProfile
+      return true;
+    }
+
+    public async Task<int> RemoveGenresAsync(Guid artistProfileId, List<string> genreNames)
+    {
+      var artistProfile = await _context.ArtistProfiles
+          .Include(ap => ap.Genres)
+          .FirstOrDefaultAsync(ap => ap.Id == artistProfileId);
+      if (artistProfile == null)
+        throw new KeyNotFoundException("ArtistProfile not found");
+
+      if(artistProfile.Genres == null || !artistProfile.Genres.Any())
+        return 0;
+
+      var toRemove = artistProfile.Genres.Where(g => genreNames.Contains(g.Name)).ToList();
+
+      if(OnRemoveGenres != null)
+        await OnRemoveGenres.InvokeAsync(this, new (artistProfile, toRemove));
+
+      foreach (var genre in toRemove)
       {
-        Id = artistId,
-        Name = dto.Name!,
-        Location = dto.Location ?? string.Empty,
-        Availability = dto.Availability.Value,
-        Bio = dto.Bio ?? string.Empty,
-        Description = dto.Description ?? string.Empty,
-        Members = members,
-        Genres = genres
+        artistProfile.Genres.Remove(genre);
+      }
+      int result = await _context.SaveChangesAsync();
+
+      foreach (var genre in toRemove)
+      {
+        var artistProfilesUsingGenre = await GetArtistProfilesUsingGenre(genre);
+
+        if (!artistProfilesUsingGenre.Any())
+        {
+          await _genreService.RemoveGenreAsync(genre);
+        }
+      }
+      
+      return result;
+    }
+    #endregion
+
+    public record class GenreEventArgs(ArtistProfile ArtistProfile, Genre Genre);
+    public record class GenresEventArgs(ArtistProfile ArtistProfile, List<Genre> Genres);
+  }
+  
+  public record class ArtistMemberDto(Guid? Id = null, string? Name = null, string? Role = null)
+  {
+    public ArtistMember ToArtistMember(ArtistProfile artistProfile)
+    {
+      if(string.IsNullOrWhiteSpace(Name))
+        throw new ArgumentException("Name is required.", nameof(Name));
+
+      if(string.IsNullOrWhiteSpace(Role))
+        throw new ArgumentException("Role is required.", nameof(Role));
+
+      Guid id = Id.HasValue ? Id.Value : Guid.NewGuid();
+
+      return new ArtistMember()
+      {
+        Id = id,
+        Name = Name,
+        Role = Role,
+        ArtistProfileId = artistProfile.Id,
+        ArtistProfile = artistProfile,
       };
-      return profile;
+    }
+
+    public void UpdateArtistMember(ArtistMember member)
+    {
+      if (Name != null)
+        member.Name = Name;
+
+      if (Role != null)
+        member.Role = Role;
+    }
+
+    public static ArtistMemberDto FromArtistMember(ArtistMember artistMember)
+    {
+      return new ArtistMemberDto(artistMember.Id, artistMember.Name, artistMember.Role);
     }
   }
-
-  public class ArtistProfileQueryOptions
+  public record class CreateArtistDto(string Name, string? Location, string? Bio, string? Description, AvailabilityStatus Availability, bool PublicProfile = true)
   {
-    public bool includeGenres { get; set; }
-    public bool includeMembers { get; set; }
-    public bool includeGalleryOwner { get; set; }
-
-    public IQueryable<ArtistProfile> Apply(IQueryable<ArtistProfile> query)
+    public ArtistProfile ToArtistProfile()
     {
-      if (includeGenres)
-        query = query.Include(ap => ap.Genres);
-      if (includeMembers)
-        query = query.Include(ap => ap.Members);
-      if (includeGalleryOwner)
-        query = query.Include(ap => ap.GalleryOwner);
-      return query;
+      if(string.IsNullOrWhiteSpace(Name))
+        throw new ArgumentException("Name is required.", nameof(Name));
+
+      Guid id = Guid.NewGuid();
+
+      ArtistProfile profile =  new ArtistProfile()
+      {
+        Id = Guid.NewGuid(),
+        Name = Name,
+        Location = Location ?? string.Empty,
+        Bio = Bio ?? string.Empty,
+        Description = Description ?? string.Empty,
+        Availability = Availability,
+        Public = PublicProfile,
+        Members = new List<ArtistMember>(),
+        Genres = new List<Genre>(),
+      };
+
+      return profile;
+    }
+    public static CreateArtistDto FromArtistProfile(ArtistProfile artistProfile)
+    {
+      return new CreateArtistDto(artistProfile.Name, artistProfile.Location, artistProfile.Bio, artistProfile.Description, artistProfile.Availability, artistProfile.Public);
+    }
+  }
+  public record class UpdateArtistDto(string? Name = null, string? Location = null, string? Bio = null, string? Description = null, AvailabilityStatus? Availability = null, bool? PublicProfile = null)
+  {
+    public void UpdateProfile(ArtistProfile profile)
+    { 
+      if(Name != null)
+        profile.Name = Name;
+
+      if (Location != null)
+        profile.Location = Location;
+
+      if (Bio != null)
+        profile.Bio = Bio;
+
+      if (Description != null)
+        profile.Description = Description;
+
+      if (Availability != null)
+        profile.Availability = Availability.Value;
+
+      if (PublicProfile != null)
+        profile.Public = PublicProfile.Value;
+    }
+    public static UpdateArtistDto FromArtistProfile(ArtistProfile artistProfile)
+    {
+      return new UpdateArtistDto(artistProfile.Name, artistProfile.Location, artistProfile.Bio, artistProfile.Description, artistProfile.Availability, artistProfile.Public);
     }
   }
 }

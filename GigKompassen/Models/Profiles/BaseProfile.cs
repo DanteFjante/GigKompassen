@@ -1,16 +1,12 @@
 ﻿using GigKompassen.Enums;
 using GigKompassen.Models.Accounts;
+using GigKompassen.Models.Media;
 
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GigKompassen.Models.Profiles
 {
-  public abstract class Profile
+  public abstract class BaseProfile
   {
     [Key]
     public Guid Id { get; set; }
@@ -23,9 +19,13 @@ namespace GigKompassen.Models.Profiles
     [Required]
     public virtual ProfileTypes ProfileType { get; }
 
-    public List<ProfileAccess>? ProfileAccesses { get; set; }
-
+    //Foreign Keys
     public Guid OwnerId { get; set; }
+    public Guid MediaGalleryOwnerId { get; set; }
+
+    //Navigation properties
     public ApplicationUser? Owner { get; set; }
+    public MediaGalleryOwner? MediaGalleryOwner { get; set; }
+
   }
 }

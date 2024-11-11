@@ -11,10 +11,10 @@ namespace GigKompassen.Models.Media
 
     // Foreign keys
     public Guid GalleryId { get; set; }
-    public Guid LinkId { get; set; }
+    public Guid? MediaLinkId { get; set; }
 
     // Navigation properties
     public MediaGallery Gallery { get; set; }
-    public MediaLink Link { get; set; }
+    public MediaLink? MediaLink { get; set; }
   }
 }

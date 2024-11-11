@@ -27,7 +27,7 @@ namespace GigKompassen.Models.Chats
     public override ChatMessageType DataType => ChatMessageType.Media;
 
     // Foreign key
-    public Guid MediaLinkId { get; set; }
+    public Guid? MediaLinkId { get; set; }
 
     // Navigation property
     public MediaLink? MediaLink { get; set; }

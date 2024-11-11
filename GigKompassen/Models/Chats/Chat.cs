@@ -12,10 +12,13 @@ namespace GigKompassen.Models.Chats
     [Required]
     public DateTime Created { get; set; } = DateTime.UtcNow;
 
+    // Foreign keys
+    public Guid MediaGalleryOwnerId { get; set; }
+
     // Navigation properties
     public List<ChatMessage>? Messages { get; set; } = new List<ChatMessage>();
     public List<ChatParticipant>? Participants { get; set; } = new List<ChatParticipant>();
-    public MediaGalleryOwner? GalleryOwner { get; set; }
+    public MediaGalleryOwner? MediaGalleryOwner { get; set; }
 
   }
 }

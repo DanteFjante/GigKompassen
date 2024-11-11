@@ -10,6 +10,6 @@ namespace GigKompassen.Enums
   {
     View,
     Edit,
-    Delete,
+    Represent
   }
 }

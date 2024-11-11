@@ -8,7 +8,7 @@
     // Foreign keys
     public Guid ChatId { get; set; }
     public Guid SenderId { get; set; } // ChatParticipantId
-    public Guid ContentId { get; set; }
+    public Guid? ContentId { get; set; }
     public Guid? ReplyToId { get; set; }
 
     // Navigation properties

@@ -1,8 +1,10 @@
-﻿using GigKompassen.Settings;
+﻿using GigKompassen.Models.Accounts;
+using GigKompassen.Settings;
 
 using MailKit.Net.Smtp;
 using MailKit.Security;
 
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -11,7 +13,7 @@ using MimeKit;
 
 namespace GigKompassen.Services
 {
-  public class GmailService : IEmailSender
+  public class GmailService : IEmailSender<ApplicationUser>
   {
 
     public EmailSettings Options;
@@ -49,5 +51,19 @@ namespace GigKompassen.Services
       }
     }
 
+    public async Task SendConfirmationLinkAsync(ApplicationUser user, string email, string confirmationLink)
+    {
+      await SendEmailAsync(email, "Confirm your email", $"Please confirm your email by clicking this link: <a href='{confirmationLink}'>link</a>");
+    }
+
+    public async Task SendPasswordResetLinkAsync(ApplicationUser user, string email, string resetLink)
+    {
+      await SendEmailAsync(email, "Reset your password", $"Please reset your password by clicking this link: <a href='{resetLink}'>link</a>");
+    }
+
+    public async Task SendPasswordResetCodeAsync(ApplicationUser user, string email, string resetCode)
+    {
+      await SendEmailAsync(email, "Reset your password", $"Your password reset code is: {resetCode}");
+    }
   }
 }

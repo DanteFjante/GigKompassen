@@ -14,6 +14,6 @@ namespace GigKompassen.Models.Accounts
 
     // Navigation properties
     public ApplicationUser? User { get; set; }
-    public Profile? Profile { get; set; }
+    public BaseProfile? Profile { get; set; }
   }
 }

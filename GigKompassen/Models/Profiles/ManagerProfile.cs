@@ -1,10 +1,8 @@
 ﻿using GigKompassen.Enums;
 
-using System.ComponentModel.DataAnnotations;
-
 namespace GigKompassen.Models.Profiles
 {
-  public class ManagerProfile : Profile
+  public class ManagerProfile : BaseProfile
   {
     public string Description { get; set; } = String.Empty;
     public string Location { get; set; } = String.Empty;

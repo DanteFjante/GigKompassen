@@ -1,11 +1,11 @@
-﻿using GigKompassen.Models.Profiles;
-using GigKompassen.Models.Chats;
+﻿using GigKompassen.Models.Chats;
 
 namespace GigKompassen.Models.Media
 {
   public class MediaGallery
   {
     public Guid Id { get; set; }
+    public string Name { get; set; }
 
     //Foreign Keys
     public Guid OwnerId { get; set; }
