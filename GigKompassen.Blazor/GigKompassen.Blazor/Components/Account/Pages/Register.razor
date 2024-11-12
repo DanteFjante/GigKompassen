@@ -70,6 +70,13 @@
 		await UserStore.SetUserNameAsync(user, Input.Username, CancellationToken.None);
 		var emailStore = GetEmailStore();
 		await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+
+		if(await emailStore.FindByEmailAsync(Input.Email, CancellationToken.None) != null)
+		{
+			identityErrors = new List<IdentityError> { new IdentityError { Code = "EmailAlreadyExists", Description = "Email already exists." } };
+			return;
+		}
+
 		var result = await UserManager.CreateAsync(user, Input.Password);
 
 		if (!result.Succeeded)
