@@ -1,78 +1,203 @@
 ﻿@using System.ComponentModel.DataAnnotations
+@using GigKompassen.Blazor.Models.Status
+@using GigKompassen.Models.Accounts
+@using GigKompassen.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using GigKompassen.Blazor.Components.Profile
 
-<div class="row">
-	<div class="col-md-12">
-		<StatusMessage Message="@Message"/>
-    <EditForm Model="Input" OnValidSubmit="SumbitProfile" FormName="CompleteRegistration">
-      <DataAnnotationsValidator />
-      <h3>Complete your profile</h3>
-      <hr />
-      <ValidationSummary class="text-danger" role="alert" />
-      <div class="form-floating mb-3">
-        <InputText @bind-Value="Input.FirstName" class="form-control" autocomplete="firstname" aria-required="true" placeholder="First Name" />
-        <label for="Input.FirstName" class="form-label">First Name</label>
-        <ValidationMessage For="() => Input.FirstName" class="text-danger" />
-      </div>
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject UserService UserService;
+@inject StatusCollection StatusCollection;
 
-      <div class="form-floating mb-3">
-        <InputText @bind-Value="Input.LastName" class="form-control" autocomplete="lastname" aria-required="true" placeholder="Last Name" />
-        <label for="Input.LastName" class="form-label">Last Name</label>
-        <ValidationMessage For="() => Input.LastName" class="text-danger" />
-      </div>
+<hr />
+<h4>Complete your profile</h4>
+<hr />
+@if(IsAuthorized == null)
+{
+  <p>Loading...</p>
+}
+else if(IsAuthorized.Value)
+{
 
-      @* Add additional fields based on the user's role *@
-      <!-- Profile Type Selection -->
-      <div class="form-floating mb-3">
-        <InputSelect class="form-control" @bind-Value="Input.ProfileTypeSelection">
-          <option value="">Select Profile Type</option>
-          @foreach (var type in Enum.GetValues<ProfileType>())
+    
+  <div class="row">
+    <div class="col-md-12">
+      @if (!ProfileCompleted)
+      {
+      <EditForm Model="Input" OnValidSubmit="SubmitProfile" FormName="CompleteProfile" @ref="editForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger" role="alert" />
+
+        <!-- First Name -->
+        <div class="form-floating mb-3">
+          <InputText @bind-Value="Input.FirstName" id="FirstName" class="form-control" autocomplete="given-name" placeholder="First Name"  />
+          <label for="FirstName" class="form-label">First Name</label>
+          <ValidationMessage For="@(() => Input.FirstName)" class="text-danger" />
+        </div>
+
+        <!-- Last Name -->
+        <div class="form-floating mb-3">
+          <InputText @bind-Value="Input.LastName" id="LastName" class="form-control" autocomplete="family-name" placeholder="Last Name" />
+          <label for="LastName" class="form-label">Last Name</label>
+          <ValidationMessage For="@(() => Input.LastName)" class="text-danger" />
+        </div>
+
+        <!-- Profile Type Selection -->
+        <div class="form-floating mb-3">
+          <InputSelect @bind-Value="Input.ProfileTypeSelection" id="ProfileTypeSelection" class="form-control">
+            <option value="">Select Profile Type</option>
+            @foreach (var type in Enum.GetValues<ProfileType>())
+            {
+              <option value="@type">@type</option>
+            }
+          </InputSelect>
+          <label for="ProfileTypeSelection">Profile Type</label>
+          <ValidationMessage For="@(() => Input.ProfileTypeSelection)" class="text-danger" />
+        </div>
+
+        <!-- Conditional Fields Based on ProfileTypeSelection -->
+        @if (Input.ProfileTypeSelection == ProfileType.Artist)
+        {
+          <hr />
+          <p>Artist Fields</p>
+          <CreateArtistProfileComponent @ref="createArtistProfileComponent"/>
+        }
+        else if (Input.ProfileTypeSelection == ProfileType.Scene)
+        {
+          <hr />
+          <p>Scene Fields</p>
+        }
+        else if (Input.ProfileTypeSelection == ProfileType.Manager)
+        {
+          <hr />
+          <p>Manager Fields</p>
+        }
+
+        </EditForm>
+      }
+      else
+      {
+        <p>Your profile is already completed.</p>
+        @if(!HasProfile)
+        {
+          <!-- Profile Type Selection -->
+          <div class="form-floating mb-3">
+            <InputSelect @bind-Value="Input.ProfileTypeSelection" id="ProfileTypeSelection" class="form-control">
+              <option value="">Select Profile Type</option>
+              @foreach (var type in Enum.GetValues<ProfileType>())
+              {
+                <option value="@type">@type</option>
+              }
+            </InputSelect>
+            <label for="ProfileTypeSelection">Profile Type</label>
+            <ValidationMessage For="@(() => Input.ProfileTypeSelection)" class="text-danger" />
+          </div>
+          <!-- Conditional Fields Based on ProfileTypeSelection -->
+          @if (Input.ProfileTypeSelection == ProfileType.Artist)
           {
-            <option value="@type">@type</option>
+            <hr />
+            <p>Artist Fields</p>
+            <CreateArtistProfileComponent @ref="createArtistProfileComponent" />
           }
-        </InputSelect>
-        <label>Profile Type</label>
-        <ValidationMessage For="() => Input.ProfileTypeSelection" class="text-danger" />
-      </div>
-
-      <hr />
-      <!-- Conditional Fields Based on ProfileTypeSelection -->
-      @if (Input.ProfileTypeSelection == ProfileType.Artist)
-      {
-        <div class="form-floating mb-3">
-          <label>Artist Field</label>
-        </div>
+          else if (Input.ProfileTypeSelection == ProfileType.Scene)
+          {
+            <hr />
+            <p>Scene Fields</p>
+          }
+          else if (Input.ProfileTypeSelection == ProfileType.Manager)
+          {
+            <hr />
+            <p>Manager Fields</p>
+          }
+        }
       }
-      else if (Input.ProfileTypeSelection == ProfileType.Scene)
-      {
-        <div class="form-floating mb-3">
-          <label>Scene Field</label>
-        </div>
-      }
-      else if (Input.ProfileTypeSelection == ProfileType.Manager)
-      {
-        <div class="form-floating mb-3">
-          <label>Manager Field</label>
-        </div>
-      }
-      <hr />
-      <button type="submit" class="w-100 btn btn-lg btn-primary">Complete Registration</button>
-    </EditForm>
-
-	</div>
-</div>
+    </div>
+  </div>
+}
+<hr />
 
 @code {
-  public string? Message { get; set; }
-  public InputModel Input { get; set; } = new InputModel();
 
+  EditForm editForm;
+  CreateArtistProfileComponent createArtistProfileComponent;
 
-  public async Task SumbitProfile()
+  [SupplyParameterFromForm]
+  public InputModel? Input { get; set; } = new InputModel();
+
+  public bool? IsAuthorized {get; set; }
+  public bool ProfileCompleted {get; set; }
+  public bool HasProfile {get; set; }
+  public ApplicationUser? User { get; set; }
+
+  protected override async Task OnInitializedAsync()
   {
+    var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    var user = authState.User;
+    if (!user.Identity!.IsAuthenticated)
+    {
+      IsAuthorized = false;
+      AddError("You must be logged in to complete your profile. Please log in.", "/Account/Login");
+      return;
+    }
+    IsAuthorized = true;
+    User = await UserManager.GetUserAsync(user);
+    ProfileCompleted = User.ProfileCompleted;
+    HasProfile = await UserService.UserHasProfile(User.Id);
 
   }
+  private void OnProfileTypeSelectionChanged(EventArgs e)
+  {
+    StateHasChanged();
+  }
 
+  public async Task SubmitForm()
+  {
+    if(editForm != null && editForm.EditContext != null)
+    {
+      if(editForm.EditContext.Validate())       
+      {
+        await editForm.OnValidSubmit.InvokeAsync(editForm.EditContext);
+      }
+    }
+    else
+    {
+      AddError("Complete profile form is not valid.");
+    }
+  }
 
-  public enum ProfileType {
+  public async Task SubmitProfile()
+  {
+    var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    var userClaim = authState.User;
+
+    if (!userClaim.Identity.IsAuthenticated)
+    {
+      AddError("User is not authenticated.");
+      return;
+    }
+    await createArtistProfileComponent.SubmitForm();
+    if(createArtistProfileComponent.ArtistProfile == null)
+    {
+      AddError("Could not create artist profile.");
+      return;
+    }
+    // Access user claims if needed
+    var user = await UserManager.GetUserAsync(userClaim);
+    // Process the form data
+    // For example, save the profile data to the database
+    if(!await UserService.CompleteUserProfileAsync(user.Id, Input.FirstName, Input.LastName))
+    {
+      AddError("Failed to complete profile.");
+      return;
+    }
+
+    AddSuccess("Profile completed successfully.");
+  }
+
+  public enum ProfileType
+  {
     Artist,
     Scene,
     Manager
@@ -83,6 +208,7 @@
     [Required]
     [Display(Name = "First Name")]
     public string FirstName { get; set; } = "";
+
     [Required]
     [Display(Name = "Last Name")]
     public string LastName { get; set; } = "";
@@ -91,4 +217,14 @@
     [Display(Name = "Profile Type")]
     public ProfileType? ProfileTypeSelection { get; set; }
   }
+
+  private void AddError(string error, string? link = null)
+  {
+    StatusCollection.AddEntry<CompleteProfile>(StatusType.Danger, error, link);
+  }
+
+  private void AddSuccess(string message, string? link = null)
+	{
+		StatusCollection.AddEntry<CompleteProfile>(StatusType.Success, message, link);
+	}
 }
