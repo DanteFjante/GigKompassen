@@ -28,6 +28,13 @@ namespace GigKompassen.Services
       _userManager = userManager;
     }
 
+    #region Has
+    public async Task<bool> UserHasProfile(Guid userId)
+    {
+      return await _context.Profiles.AnyAsync(p => p.OwnerId == userId);
+    }
+    #endregion
+
     #region Getters
     public async Task<ApplicationUser?> GetUserByIdAsync(Guid id)
     {
