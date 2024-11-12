@@ -1,26 +1,54 @@
-﻿using GigKompassen.Enums;
+﻿using GigKompassen.Authorization.Policies.Handlers;
+using GigKompassen.Enums;
 using GigKompassen.Models.Accounts;
+using GigKompassen.Services;
+using GigKompassen.Settings;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace GigKompassen.Misc
 {
   public static class StartupHelper
   {
-    public static async Task SeedRolesAsync(RoleManager<ApplicationRole> roleManager)
+
+    public static void AddGigKompassenConfiguration<AssemblyType>(this IHostApplicationBuilder builder) where AssemblyType : class
     {
-      foreach (var roleName in Enum.GetNames(typeof(ApplicationRoleTypes)))
+      builder.Configuration.AddUserSecrets<AssemblyType>();
+      builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection(nameof(EmailSettings)));
+    }
+
+    public static void AddGigKompassenServices(this IServiceCollection services)
+    {
+      services.AddTransient<IEmailSender<ApplicationUser>, GmailService>();
+
+      services.AddTransient<ArtistService>();
+      services.AddTransient<GenreService>();
+      services.AddTransient<ManagerService>();
+      services.AddTransient<MediaService>();
+      services.AddTransient<ProfileAccessService>();
+      services.AddTransient<SceneService>();
+      services.AddTransient<UserService>();
+    }
+
+    public static async Task ConfigureGigKompassenRolesAsync(this IServiceProvider serviceProvider)
+    {
+      using (var scope = serviceProvider.CreateScope())
       {
-        if (!await roleManager.RoleExistsAsync(roleName))
+
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
+
+        foreach (var roleName in Enum.GetNames(typeof(ApplicationRoleTypes)))
         {
-          await roleManager.CreateAsync(new ApplicationRole { Name = roleName });
+          if (!await roleManager.RoleExistsAsync(roleName))
+          {
+            await roleManager.CreateAsync(new ApplicationRole(roleName));
+          }
         }
+
       }
     }
   }
