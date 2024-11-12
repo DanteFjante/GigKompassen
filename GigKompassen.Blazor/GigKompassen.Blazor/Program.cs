@@ -8,11 +8,9 @@ using GigKompassen.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using GigKompassen.Settings;
-using static Org.BouncyCastle.Math.EC.ECCurve;
-using GigKompassen.Authorization.Policies.Handlers;
-using GigKompassen.Enums;
-using Microsoft.AspNetCore.Authorization;
+using GigKompassen.Misc;
+using GigKompassen.Blazor.Components.Account.Shared;
+using GigKompassen.Blazor.Models.Status;
 
 namespace GigKompassen.Blazor
 {
@@ -24,13 +22,15 @@ namespace GigKompassen.Blazor
 
       // Add services to the container.
       builder.Services.AddRazorComponents()
-          .AddInteractiveServerComponents()
-          .AddInteractiveWebAssemblyComponents();
+        .AddInteractiveServerComponents()
+        .AddInteractiveWebAssemblyComponents();
 
       builder.Services.AddCascadingAuthenticationState();
       builder.Services.AddScoped<IdentityUserAccessor>();
       builder.Services.AddScoped<IdentityRedirectManager>();
       builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
+
+      builder.Services.AddSingleton<StatusCollection>();
 
       builder.Services.AddAuthentication(options =>
           {
@@ -44,12 +44,12 @@ namespace GigKompassen.Blazor
       var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
       builder.Services.AddDbContext<ApplicationDbContext>(options =>
           options.UseSqlServer(
-            connectionString, 
+            connectionString,
             sqlOptions => sqlOptions.MigrationsAssembly(assemblyname)));
       builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-      AddConfiguration(builder.Configuration, builder.Services);
-      ConfigureServices(builder.Services);
+      builder.AddGigKompassenConfiguration<Program>();
+      builder.Services.AddGigKompassenServices();
 
       builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
         .AddRoles<ApplicationRole>()
@@ -63,7 +63,7 @@ namespace GigKompassen.Blazor
 
       var app = builder.Build();
 
-      await CreateRoles(app.Services);
+      await app.Services.ConfigureGigKompassenRolesAsync();
       // Configure the HTTP request pipeline.
       if (app.Environment.IsDevelopment())
       {
@@ -76,6 +76,7 @@ namespace GigKompassen.Blazor
         // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
         app.UseHsts();
       }
+
 
       app.UseHttpsRedirection();
 
@@ -93,43 +94,6 @@ namespace GigKompassen.Blazor
       app.Run();
     }
 
-    public static void AddConfiguration(IConfigurationManager config, IServiceCollection services)
-    {
-      config.AddUserSecrets<Program>();
-      services.Configure<EmailSettings>(config.GetSection(nameof(EmailSettings)));
-    }
 
-    public static void ConfigureServices(IServiceCollection services)
-    {
-      services.AddTransient<IEmailSender<ApplicationUser>, GmailService>();
-
-      services.AddScoped<IAuthorizationHandler, ProfileComleteHandler>();
-
-      services.AddTransient<ArtistService>();
-      services.AddTransient<GenreService>();
-      services.AddTransient<ManagerService>();
-      services.AddTransient<MediaService>();
-      services.AddTransient<ProfileAccessService>();
-      services.AddTransient<SceneService>();
-      services.AddTransient<UserService>();
-    }
-
-    public static async Task CreateRoles(IServiceProvider serviceProvider)
-    {
-      using (var scope = serviceProvider.CreateScope())
-      {
-
-        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
-
-        foreach (var roleName in Enum.GetNames(typeof(ApplicationRoleTypes)))
-        {
-          if (!await roleManager.RoleExistsAsync(roleName))
-          {
-            await roleManager.CreateAsync(new ApplicationRole(roleName));
-          }
-        }
-
-      }
-    }
   }
 }

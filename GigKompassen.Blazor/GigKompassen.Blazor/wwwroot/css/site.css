@@ -1,0 +1,34 @@
+﻿@keyframes fadeInFromTop {
+	from {
+		opacity: 0;
+		transform: translateY(-20px); /* Start 20px above */
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0); /* End at original position */
+	}
+}
+
+.fade-top {
+	animation: fadeInFromTop 0.5s ease-in-out;
+}
+
+/* Additional padding in the alert box to make room for the subject */
+.alert {
+	padding-top: 1.75rem; /* Creates space at the top for the subject */
+	position: relative;
+}
+
+/* Style the subject to appear as a label at the top edge of the alert box */
+.alert-subject {
+	position: absolute;
+	top: -0.6rem; /* Adjust as needed to overlap the top edge */
+	left: 0rem; /* Adjust to control horizontal position */
+	background-color: transparent; /* Matches the alert background color */
+	padding: 0 0.25rem; /* Adds padding to make it look like a label */
+	font-size: 0.85rem; /* Smaller font size for the subject */
+	color: #6c757d; /* Muted color for contrast */
+	font-weight: bold;
+	z-index: 1; /* Ensure it stays above other elements */
+}

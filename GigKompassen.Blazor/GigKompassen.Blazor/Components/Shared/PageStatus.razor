@@ -1,0 +1,71 @@
+﻿@using GigKompassen.Blazor.Models.Status
+
+@inject ILogger<PageStatus> Logger
+@inject StatusCollection StatusCollection
+
+@if (StatusCollection != null && StatusCollection.StatusEntries.Any())
+{
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-4">
+        @foreach (var topic in StatusCollection.GetSubjects())
+        {
+          foreach (var entry in StatusCollection.GetEntries(topic))
+          {
+            <div class="alert alert-@entry.GetColor() alert-dismissible fade show position-relative" role="alert" @key="entry">
+              @if(entry.Instances == 1)
+              {
+                <div class="alert-subject">@entry.Subject</div>
+              }
+              else
+              {
+                <div class="alert-subject">(@entry.Instances) @entry.Subject</div>
+              }
+
+              <i class="bi bi-@entry.GetIcon()" />
+              <span class="alert-message">@entry.Message</span>
+
+              @if (!string.IsNullOrEmpty(entry.Link))
+              {
+                <a href="@entry.Link" class="alert-link" target="_blank"> Click Here</a> <!-- Display link -->
+              }
+
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"
+                      @onclick="() => DismissEntry(entry)">
+              </button>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+}
+
+@code {
+
+  protected override void OnInitialized()
+  {
+    if (StatusCollection != null)
+    {
+      StatusCollection.OnChange += UpdateStatus;
+    }
+  }
+
+  private void UpdateStatus()
+  {
+    InvokeAsync(StateHasChanged); // Re-render the component
+  }
+
+  private void DismissEntry(StatusEntry entry)
+  {
+    StatusCollection.RemoveEntry(entry);
+  }
+
+  public void Dispose()
+  {
+    if (StatusCollection != null)
+    {
+      StatusCollection.OnChange -= UpdateStatus;
+    }
+  }
+}
