@@ -49,12 +49,12 @@ namespace GigKompassen.Data
         entity.HasOne(p => p.Owner)
               .WithMany()
               .HasForeignKey(p => p.OwnerId)
-              .OnDelete(DeleteBehavior.NoAction); // When ApplicationUser is deleted, delete Profile
+              .OnDelete(DeleteBehavior.Cascade); // When ApplicationUser is deleted, delete Profile
 
         entity.HasOne(p => p.MediaGalleryOwner)
               .WithOne()
               .HasForeignKey<BaseProfile>(p => p.MediaGalleryOwnerId)
-              .OnDelete(DeleteBehavior.NoAction); // When Profile is deleted, delete MediaGalleryOwner
+              .OnDelete(DeleteBehavior.Cascade); // When Profile is deleted, delete MediaGalleryOwner
       });
 
       modelBuilder.Entity<ArtistProfile>().HasBaseType<BaseProfile>();
@@ -76,12 +76,12 @@ namespace GigKompassen.Data
         entity.HasOne(pa => pa.User)
               .WithMany()
               .HasForeignKey(pa => pa.UserId)
-              .OnDelete(DeleteBehavior.NoAction); // When ApplicationUser is deleted, delete ProfileAccess
+              .OnDelete(DeleteBehavior.Cascade); // When ApplicationUser is deleted, delete ProfileAccess
 
         entity.HasOne(pa => pa.Profile)
               .WithMany()
               .HasForeignKey(pa => pa.ProfileId)
-              .OnDelete(DeleteBehavior.NoAction); // When Profile is deleted, delete ProfileAccess
+              .OnDelete(DeleteBehavior.Cascade); // When Profile is deleted, delete ProfileAccess
       });
 
       //Cofigure Chat
@@ -92,7 +92,7 @@ namespace GigKompassen.Data
         entity.HasOne(c => c.MediaGalleryOwner)
               .WithOne()
               .HasForeignKey<Chat>(c => c.MediaGalleryOwnerId)
-              .OnDelete(DeleteBehavior.NoAction); // When Chat is deleted, delete MediaGalleryOwner
+              .OnDelete(DeleteBehavior.Cascade); // When Chat is deleted, delete MediaGalleryOwner
       });
 
       // Configure ChatParticipant
@@ -103,12 +103,12 @@ namespace GigKompassen.Data
         entity.HasOne(cp => cp.User)
               .WithMany()
               .HasForeignKey(cp => cp.UserId)
-              .OnDelete(DeleteBehavior.NoAction); // Cascade when ApplicationUser is deleted
+              .OnDelete(DeleteBehavior.Cascade); // Cascade when ApplicationUser is deleted
 
         entity.HasOne(cp => cp.Chat)
               .WithMany(c => c.Participants)
               .HasForeignKey(cp => cp.ChatId)
-              .OnDelete(DeleteBehavior.NoAction); // When Chat is deleted, delete ChatParticipant
+              .OnDelete(DeleteBehavior.Cascade); // When Chat is deleted, delete ChatParticipant
 
         // Messages relationship is configured in ChatMessage
       });
@@ -126,7 +126,7 @@ namespace GigKompassen.Data
         entity.HasOne(cm => cm.Sender)
               .WithMany(cp => cp.Messages)
               .HasForeignKey(cm => cm.SenderId)
-              .OnDelete(DeleteBehavior.Restrict); // Ignore deletion of Sender
+              .OnDelete(DeleteBehavior.ClientNoAction); // Ignore deletion of Sender
 
         entity.HasOne(cm => cm.Content)
               .WithOne()
@@ -134,9 +134,9 @@ namespace GigKompassen.Data
               .OnDelete(DeleteBehavior.SetNull); // Cascade when ChatMessage is deleted
 
         entity.HasOne(cm => cm.ReplyTo)
-              .WithOne()
-              .HasForeignKey<ChatMessage>(cm => cm.ReplyToId)
-              .OnDelete(DeleteBehavior.SetNull); // Ignore deletion of ReplyTo
+              .WithMany()
+              .HasForeignKey(cm => cm.ReplyToId)
+              .OnDelete(DeleteBehavior.ClientNoAction); // Ignore deletion of ReplyTo
       });
 
       // Configure MessageContent and Inheritance
@@ -169,7 +169,7 @@ namespace GigKompassen.Data
         entity.HasMany(mgo => mgo.Galleries)
               .WithOne(g => g.Owner)
               .HasForeignKey(g => g.OwnerId)
-              .OnDelete(DeleteBehavior.NoAction); // Cascade when MediaGalleryOwner is deleted
+              .OnDelete(DeleteBehavior.Cascade); // Cascade when MediaGalleryOwner is deleted
       });
 
       // Configure MediaGallery
@@ -180,7 +180,7 @@ namespace GigKompassen.Data
         entity.HasMany(g => g.Items)
               .WithOne(mi => mi.Gallery)
               .HasForeignKey(mi => mi.GalleryId)
-              .OnDelete(DeleteBehavior.NoAction); // Cascade when MediaGallery is deleted
+              .OnDelete(DeleteBehavior.Cascade); // Cascade when MediaGallery is deleted
       });
 
       // Configure MediaItem
@@ -202,7 +202,7 @@ namespace GigKompassen.Data
         entity.HasOne(ml => ml.Uploader)
               .WithMany()
               .HasForeignKey(ml => ml.UploaderId)
-              .OnDelete(DeleteBehavior.NoAction); // Cascade when ApplicationUser is deleted
+              .OnDelete(DeleteBehavior.Cascade); // Cascade when ApplicationUser is deleted
       });
 
       // Configure ArtistProfile
@@ -211,7 +211,7 @@ namespace GigKompassen.Data
         entity.HasMany(ap => ap.Members)
               .WithOne(am => am.ArtistProfile)
               .HasForeignKey(am => am.ArtistProfileId)
-              .OnDelete(DeleteBehavior.NoAction); // Cascade when ArtistProfile is deleted
+              .OnDelete(DeleteBehavior.Cascade); // Cascade when ArtistProfile is deleted
 
         entity.HasMany(ap => ap.Genres)
               .WithMany(); // Ignore deletion
