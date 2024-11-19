@@ -45,7 +45,7 @@ namespace GigKompassen.Authorization.Middleware
           !path.Value.EndsWith(".gif"))
       {
         var user = await userManager.GetUserAsync(context.User);
-        if (user != null && !user.ProfileCompleted)
+        if (user != null && !user.RegistrationCompleted)
         {
           context.Response.Redirect("/Account/CompleteProfile");
           return;

@@ -27,7 +27,7 @@ namespace GigKompassen.Authorization.Policies.Handlers
       if (context.User.Identity.IsAuthenticated)
       {
         var user = await _userManager.GetUserAsync(context.User);
-        if (user != null && user.ProfileCompleted)
+        if (user != null && user.RegistrationCompleted)
         {
           context.Succeed(requirement);
         }

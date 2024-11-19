@@ -81,7 +81,7 @@ namespace GigKompassen.Data
         entity.HasOne(pa => pa.Profile)
               .WithMany()
               .HasForeignKey(pa => pa.ProfileId)
-              .OnDelete(DeleteBehavior.Cascade); // When Profile is deleted, delete ProfileAccess
+              .OnDelete(DeleteBehavior.ClientCascade); // When Profile is deleted, delete ProfileAccess
       });
 
       //Cofigure Chat

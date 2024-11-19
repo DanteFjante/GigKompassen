@@ -11,7 +11,7 @@ namespace GigKompassen.Models.Accounts
 
     public string? LastName { get; set; }
 
-    public bool ProfileCompleted { get; set; } = false;
+    public bool RegistrationCompleted { get; set; } = false;
     public DateTime Created { get; set; } = DateTime.UtcNow;
     public DateTime? LastLogin { get; set; }
   }

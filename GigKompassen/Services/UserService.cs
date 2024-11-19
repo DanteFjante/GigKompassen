@@ -43,7 +43,7 @@ namespace GigKompassen.Services
 
     #endregion
 
-    public async Task<bool> CompleteUserProfileAsync(Guid userId, string firstName, string lastName)
+    public async Task<bool> CompleteUserRegistrationAsync(Guid userId, string firstName, string lastName)
     {
       var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
       if (user == null)
@@ -52,12 +52,12 @@ namespace GigKompassen.Services
       if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName))
         throw new ArgumentException("First name and last name must be provided");
 
-      if(user.ProfileCompleted)
+      if(user.RegistrationCompleted)
         return false;
 
       user.FirstName = firstName;
       user.LastName = lastName;
-      user.ProfileCompleted = true;
+      user.RegistrationCompleted = true;
 
       if(OnUserProfileCompleted != null)
         await OnUserProfileCompleted.InvokeAsync(this, user);

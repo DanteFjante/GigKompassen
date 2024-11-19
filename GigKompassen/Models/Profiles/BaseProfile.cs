@@ -10,6 +10,7 @@ namespace GigKompassen.Models.Profiles
   {
     [Key]
     public Guid Id { get; set; }
+
     [Required]
     public required string Name { get; set; }
 

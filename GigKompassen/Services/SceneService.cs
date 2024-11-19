@@ -12,7 +12,6 @@ namespace GigKompassen.Services
   public class SceneService
   {
     private readonly ApplicationDbContext _context;
-    private readonly UserService _userService;
     private readonly GenreService _genreService;
     private readonly MediaService _mediaService;
 
@@ -27,29 +26,23 @@ namespace GigKompassen.Services
     public event AsyncEventHandler<GenreEventArgs> OnGenreRemoved;
     public event AsyncEventHandler<GenresEventArgs> OnGenresRemoved;
 
-    public SceneService(ApplicationDbContext context, UserService userService, GenreService genreService, MediaService mediaService)
+    public SceneService(ApplicationDbContext context, GenreService genreService, MediaService mediaService)
     {
       _context = context;
-      _userService = userService;
       _genreService = genreService;
       _mediaService = mediaService;
 
-      _userService.OnDeleteUser += async (sender, user) =>
-      {
-        var profiles = await GetSceneProfilesOwnerByUserAsync(user.Id);
-        await Task.WhenAll(profiles.Select(p => DeleteAsync(p.Id)));
-      };
     }
     #region Getters
     public async Task<ICollection<SceneProfile>> GetAllAsync()
     {
-      var sceneProfiles = await _context.SceneProfiles.ToListAsync();
+      var sceneProfiles = await _context.SceneProfiles.Include(sp => sp.Genres).ToListAsync();
       return sceneProfiles;
     }
 
     public async Task<SceneProfile?> GetAsync(Guid id)
     {
-      var sceneProfiles = await _context.SceneProfiles.FirstOrDefaultAsync(p => p.Id == id);
+      var sceneProfiles = await _context.SceneProfiles.Include(sp => sp.Genres).FirstOrDefaultAsync(p => p.Id == id);
       return sceneProfiles;
     }
 

@@ -12,7 +12,6 @@ namespace GigKompassen.Services
   {
 
     private readonly ApplicationDbContext _context;
-    private readonly UserService _userService;
 
     public event AsyncEventHandler<MediaGallery> OnCreateMediaGallery;
     public event AsyncEventHandler<MediaItem> OnCreateMediaItem;
@@ -22,19 +21,9 @@ namespace GigKompassen.Services
     public event AsyncEventHandler<MediaItem> OnDeleteMediaItem;
     public event AsyncEventHandler<MediaLink> OnDeleteMediaLink;
 
-    public MediaService(ApplicationDbContext context, UserService userService)
+    public MediaService(ApplicationDbContext context)
     {
       _context = context;
-      _userService = userService;
-
-      if (_userService != null)
-      {
-        _userService.OnDeleteUser += async (o, user) =>
-        {
-          var mediaLinks = await GetMediaLinksFromUserAsync(user.Id);
-          await Task.WhenAll(mediaLinks.Select(ml => DeleteMediaLinkAsync(ml.Id)));
-        };
-      }
     }
 
     #region Get

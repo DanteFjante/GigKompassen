@@ -25,13 +25,14 @@ namespace GigKompassen.Misc
     {
       services.AddTransient<IEmailSender<ApplicationUser>, GmailService>();
 
+      services.AddTransient<ProfileService>();
       services.AddTransient<ArtistService>();
-      services.AddTransient<GenreService>();
       services.AddTransient<ManagerService>();
+      services.AddTransient<SceneService>();
       services.AddTransient<MediaService>();
       services.AddTransient<ProfileAccessService>();
-      services.AddTransient<SceneService>();
       services.AddTransient<UserService>();
+      services.AddTransient<GenreService>();
     }
 
     public static async Task ConfigureGigKompassenRolesAsync(this IServiceProvider serviceProvider)

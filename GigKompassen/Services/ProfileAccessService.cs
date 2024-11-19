@@ -12,28 +12,15 @@ namespace GigKompassen.Services
   public class ProfileAccessService
   {
     private readonly ApplicationDbContext _context;
-    private readonly UserService _userService;
-    private readonly ArtistService _artistService;
-    private readonly SceneService _sceneService;
-    private readonly ManagerService _managerService;
 
     public event AsyncEventHandler<ProfileAccess> OnAddAuthorization;
     public event AsyncEventHandler<ProfileAccess> OnRemoveAuthorization;
     public event AsyncEventHandler<List<ProfileAccess>> OnRemoveAuthorizations;
     public event AsyncEventHandler<BaseProfile> OnSetProfileOwner;
 
-    public ProfileAccessService(ApplicationDbContext context, UserService userService, ArtistService artistService, SceneService sceneService, ManagerService managerService) 
+    public ProfileAccessService(ApplicationDbContext context) 
     {
       _context = context;
-      _userService = userService;
-      _artistService = artistService;
-      _sceneService = sceneService;
-      _managerService = managerService;
-
-      _userService.OnDeleteUser += async (sender, user) => await ClearAuthorizationsFromUserAsync(user.Id);
-      _artistService.OnDeleteArtistProfile += async (sender, artist) => await ClearAuthorizationsFromProfileAsync(artist.Id);
-      _sceneService.OnDeleteSceneProfile += async (sender, scene) => await ClearAuthorizationsFromProfileAsync(scene.Id);
-      _managerService.OnDeleteManagerProfile += async (sender, manager) => await ClearAuthorizationsFromProfileAsync(manager.Id);
 
     }
 

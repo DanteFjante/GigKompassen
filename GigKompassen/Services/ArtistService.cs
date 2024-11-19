@@ -5,6 +5,8 @@ using GigKompassen.Models.Profiles;
 
 using Microsoft.EntityFrameworkCore;
 
+using System.Runtime.InteropServices;
+
 using static GigKompassen.Misc.AsyncEventsHelper;
 
 namespace GigKompassen.Services
@@ -16,7 +18,6 @@ namespace GigKompassen.Services
     public delegate void GenresEventHandler(object? sender, ArtistProfile artistProfile, List<Genre> genres);
 
     private readonly ApplicationDbContext _context;
-    private readonly UserService _userService;
     private readonly GenreService _genreService;
     private readonly MediaService _mediaService;
 
@@ -33,28 +34,25 @@ namespace GigKompassen.Services
     public event AsyncEventHandler<GenresEventArgs> OnRemoveGenres;
 
 
-    public ArtistService(ApplicationDbContext context, UserService userService, GenreService genreService, MediaService mediaService)
+    public ArtistService(ApplicationDbContext context, GenreService genreService, MediaService mediaService)
     {
       _context = context;
-      _userService = userService;
       _genreService = genreService;
       _mediaService = mediaService;
-
-      if (_userService != null)
-      {
-        _userService.OnDeleteUser += async (sender, user) =>
-        {
-          var profiles = await GetArtistProfilesOwnerByUserAsync(user.Id);
-          await Task.WhenAll(profiles.Select(p => DeleteAsync(p.Id)));
-        };
-      }
-
     }
 
     #region Getters
-    public async Task<List<ArtistProfile>> GetAllAsync()
+    public async Task<List<ArtistProfile>> GetAllAsync(int? skip = null, int? take = null)
     {
-      var artistProfiles = await _context.ArtistProfiles.ToListAsync();
+      var query = _context.ArtistProfiles.Include(ap => ap.Genres).Include(ap => ap.Members).AsQueryable();
+
+      if (skip.HasValue)
+        query = query.Skip(skip.Value).AsQueryable();
+
+      if (take.HasValue)
+        query = query.Take(take.Value).AsQueryable();
+
+      var artistProfiles = await query.ToListAsync();
 
       return artistProfiles;
     }
@@ -62,7 +60,10 @@ namespace GigKompassen.Services
 
     public async Task<ArtistProfile?> GetAsync(Guid id)
     {
-      var artistProfile = await _context.ArtistProfiles.FirstOrDefaultAsync(ap => ap.Id == id);
+      var artistProfile = await _context.ArtistProfiles
+        .Include(ap => ap.Members)
+        .Include(ap => ap.Genres)
+        .FirstOrDefaultAsync(ap => ap.Id == id);
 
       if (artistProfile == null)
         return null;
@@ -96,12 +97,12 @@ namespace GigKompassen.Services
                 .ToListAsync();
     }
 
-    public async Task<List<ArtistProfile>> GetArtistProfilesOwnerByUserAsync(Guid userId)
+    public async Task<List<ArtistProfile>> GetArtistProfilesOwnedByUserAsync(Guid userId)
     {
       if (!await _context.Users.AnyAsync(p => p.Id == userId))
         throw new KeyNotFoundException("User not found");
 
-      return await _context.ArtistProfiles.Where(p => p.OwnerId == userId).ToListAsync();
+      return await _context.ArtistProfiles.Include(ap => ap.Genres).Include(ap => ap.Members).Where(p => p.OwnerId == userId).ToListAsync();
     }
     #endregion
 
@@ -186,6 +187,14 @@ namespace GigKompassen.Services
           await AddGenreAsync(profile.Id, genreName);
         }
       }
+      else if(profile.Genres != null && profile.Genres.Any())
+      {
+        var toRemove = profile.Genres.Select(g => g.Name).ToList();
+        foreach (var genreName in toRemove)
+        {
+          await RemoveGenreAsync(profile.Id, genreName);
+        }
+      }
 
       if (members != null && members.Any())
       {
@@ -215,8 +224,16 @@ namespace GigKompassen.Services
           await AddMemberAsync(profile.Id, member);
         }
       }
+      else if (profile.Members != null && profile.Members.Any())
+      {
+        var toRemove = profile.Members.Select(m => m.Id).ToList();
+        foreach (var memberId in toRemove)
+        {
+          await RemoveMemberAsync(memberId);
+        }
+      }
 
-      if(OnUpdateArtistProfile != null)
+      if (OnUpdateArtistProfile != null)
         await OnUpdateArtistProfile.InvokeAsync(this, profile);
 
       _context.ArtistProfiles.Update(profile);

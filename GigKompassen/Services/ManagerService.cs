@@ -11,24 +11,17 @@ namespace GigKompassen.Services
   public class ManagerService
   {
     private readonly ApplicationDbContext _context;
-    private readonly UserService _userService;
     private readonly MediaService _mediaService;
 
     public event AsyncEventHandler<ManagerProfile> OnCreateManagerProfile;
     public event AsyncEventHandler<ManagerProfile> OnUpdateManagerProfile;
     public event AsyncEventHandler<ManagerProfile> OnDeleteManagerProfile;
 
-    public ManagerService(ApplicationDbContext context, UserService userService, MediaService mediaService) 
+    public ManagerService(ApplicationDbContext context, MediaService mediaService) 
     {
       _context = context;
-      _userService = userService;
       _mediaService = mediaService;
 
-      _userService.OnDeleteUser += async (sender, user) =>
-      {
-        var profiles = await GetManagerProfilesOwnerByUserAsync(user.Id);
-        await Task.WhenAll(profiles.Select(p => DeleteAsync(p.Id)));
-      };
     }
 
     #region Getters
