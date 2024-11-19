@@ -14,7 +14,6 @@ namespace GigKompassen.Test.Tests.Services
   public class ArtistServiceTests
   {
     private readonly ArtistService _artistService;
-    private readonly UserService _userService;
     private readonly GenreService _genreService;
     private readonly MediaService _mediaService;
     private readonly ApplicationDbContext _context;
@@ -24,10 +23,9 @@ namespace GigKompassen.Test.Tests.Services
     public ArtistServiceTests() 
     {
       _context = GetInMemoryDbContext();
-      _userService = new UserService(_context, GetMockedUserManager(_context));
       _genreService = new GenreService(_context);
-      _mediaService = new MediaService(_context, _userService);
-      _artistService = new ArtistService(_context, _userService, _genreService, _mediaService);
+      _mediaService = new MediaService(_context);
+      _artistService = new ArtistService(_context, _genreService, _mediaService);
       
       f = new FakeDataHelper(_context);
     }

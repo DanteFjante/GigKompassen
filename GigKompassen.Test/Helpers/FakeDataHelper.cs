@@ -198,7 +198,7 @@ namespace GigKompassen.Test.Helpers
       _context.SaveChanges();
     }
 
-    public Genre? AddGenre(Guid? genreId = null)
+    public Genre? AddFakeGenre(Guid? genreId = null)
     {
       var genre = GenreFaker.Generate();
       genre.Id = genreId ?? genre.Id;

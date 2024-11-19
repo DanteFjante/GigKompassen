@@ -16,15 +16,13 @@ namespace GigKompassen.Test.Tests.Services
   {
     private readonly MediaService _mediaService;
     private readonly ApplicationDbContext _context;
-    private readonly UserService _userService;
 
     private readonly FakeDataHelper f;
 
     public MediaServiceTests()
     {
       _context = GetInMemoryDbContext();
-      _userService = new UserService(_context, GetMockedUserManager(_context));
-      _mediaService = new MediaService(_context, _userService);
+      _mediaService = new MediaService(_context);
 
       f = new FakeDataHelper(_context);
     }

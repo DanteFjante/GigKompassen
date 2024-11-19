@@ -19,12 +19,6 @@ namespace GigKompassen.Test.Tests.Services
     {
       _context = GetInMemoryDbContext();
       _userService = new UserService(_context, GetMockedUserManager(_context));
-      MediaService mediaService = new MediaService(_context, _userService);
-      GenreService genreService = new GenreService(_context);
-      ArtistService artistService = new ArtistService(_context, _userService, genreService,  mediaService);
-      SceneService sceneService = new SceneService(_context, _userService, genreService, mediaService);
-      ManagerService managerService = new ManagerService(_context, _userService, mediaService);
-      ProfileAccessService profileAccessService = new ProfileAccessService(_context, _userService, artistService, sceneService, managerService);
 
       f = new FakeDataHelper(_context);
     }
@@ -42,13 +36,13 @@ namespace GigKompassen.Test.Tests.Services
     }
 
     [Fact]
-    public async Task CanCompleteUserProfile()
+    public async Task CanCompleteUserRegistration()
     {
       var user = BogusRepositories.UserFaker.Generate();
       var user2 = BogusRepositories.UserFaker.Generate();
       
-      user.ProfileCompleted = false;
-      user2.ProfileCompleted = true;
+      user.RegistrationCompleted = false;
+      user2.RegistrationCompleted = true;
       
       user2.FirstName = "oldFirstName";
       user2.LastName = "oldLastName";
@@ -56,16 +50,16 @@ namespace GigKompassen.Test.Tests.Services
       _context.Users.AddRange(user, user2);
       await _context.SaveChangesAsync();
 
-      var result = await _userService.CompleteUserProfileAsync(user.Id, "firstName", "lastName");
-      var result2 = await _userService.CompleteUserProfileAsync(user2.Id, "firstName", "lastName");
+      var result = await _userService.CompleteUserRegistrationAsync(user.Id, "firstName", "lastName");
+      var result2 = await _userService.CompleteUserRegistrationAsync(user2.Id, "firstName", "lastName");
       var retrievedUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
       var retrievedUser2 = await _context.Users.FirstOrDefaultAsync(u => u.Id == user2.Id);
 
       Assert.True(result);
       Assert.False(result2);
       
-      Assert.True(retrievedUser.ProfileCompleted);
-      Assert.True(retrievedUser2.ProfileCompleted);
+      Assert.True(retrievedUser.RegistrationCompleted);
+      Assert.True(retrievedUser2.RegistrationCompleted);
 
       
       Assert.Equal("firstName", retrievedUser.FirstName);

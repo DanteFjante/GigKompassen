@@ -16,7 +16,6 @@ namespace GigKompassen.Test.Tests.Services
 
     private readonly SceneService _sceneService;
     private readonly ApplicationDbContext _context;
-    private readonly UserService _userService;
     private readonly GenreService _genreService;
     private readonly MediaService _mediaService;
 
@@ -25,10 +24,9 @@ namespace GigKompassen.Test.Tests.Services
     public SceneServiceTests() 
     {
       _context = GetInMemoryDbContext();
-      _userService = new UserService(_context, GetMockedUserManager(_context));
       _genreService = new GenreService(_context);
-      _mediaService = new MediaService(_context, _userService);
-      _sceneService = new SceneService(_context, _userService, _genreService, _mediaService);
+      _mediaService = new MediaService(_context);
+      _sceneService = new SceneService(_context, _genreService, _mediaService);
 
       f = new FakeDataHelper(_context);
     }

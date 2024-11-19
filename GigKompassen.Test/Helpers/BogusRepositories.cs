@@ -19,7 +19,7 @@ namespace GigKompassen.Test.Helpers
       .RuleFor(u => u.NormalizedEmail, (f, u) => u.Email?.ToUpper())
       .RuleFor(u => u.FirstName, f => f.Person.FirstName)
       .RuleFor(u => u.LastName, f => f.Person.LastName)
-      .RuleFor(u => u.ProfileCompleted, f => f.Random.Bool())
+      .RuleFor(u => u.RegistrationCompleted, f => f.Random.Bool())
       .RuleFor(u => u.EmailConfirmed, f => f.Random.Bool())
       .RuleFor(u => u.Created, f => f.Date.Past())
       .RuleFor(u => u.LastLogin, f => f.Date.Past())

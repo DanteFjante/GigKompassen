@@ -20,14 +20,8 @@ namespace GigKompassen.Test.Tests.Services
     {
 
       _context = GetInMemoryDbContext();
-      UserService userService = new UserService(_context, GetMockedUserManager(_context));
-      GenreService genreService = new GenreService(_context);
-      MediaService mediaService = new MediaService(_context, userService);
-      ArtistService artistService = new ArtistService(_context, userService, genreService, mediaService);
-      SceneService sceneService = new SceneService(_context, userService, genreService, mediaService);
-      ManagerService managerService = new ManagerService(_context, userService, mediaService);
 
-      _profileAccessService = new ProfileAccessService(_context, userService, artistService, sceneService, managerService);
+      _profileAccessService = new ProfileAccessService(_context);
 
       f = new FakeDataHelper(_context);
     }

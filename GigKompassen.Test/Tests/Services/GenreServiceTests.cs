@@ -29,7 +29,7 @@ namespace GigKompassen.Test.Tests.Services
     [Fact]
     public async Task CanCheckIfGenreExists()
     {
-      var genre = f.AddGenre();
+      var genre = f.AddFakeGenre();
 
       var resName = await _genreService.HasGenreAsync(genre.Name);
       var resId = await _genreService.HasGenreAsync(genre.Id);
@@ -46,10 +46,10 @@ namespace GigKompassen.Test.Tests.Services
     [Fact]
     public async Task CanGetGenres()
     {
-      var genre1 = f.AddGenre();
-      var genre2 = f.AddGenre();
-      var genre3 = f.AddGenre();
-      var genre4 = f.AddGenre();
+      var genre1 = f.AddFakeGenre();
+      var genre2 = f.AddFakeGenre();
+      var genre3 = f.AddFakeGenre();
+      var genre4 = f.AddFakeGenre();
 
       var genresById = await _genreService.GetGenresAsync(new List<Guid> { genre1.Id, genre2.Id, genre3.Id, genre4.Id });
       var genreById = await _genreService.GetGenreAsync(genre1.Id);
@@ -92,9 +92,9 @@ namespace GigKompassen.Test.Tests.Services
     [Fact]
     public async Task CanGetOrCreateGenres()
     {
-      var genre1 = f.AddGenre();
-      var genre2 = f.AddGenre();
-      var genre3 = f.AddGenre();
+      var genre1 = f.AddFakeGenre();
+      var genre2 = f.AddFakeGenre();
+      var genre3 = f.AddFakeGenre();
 
       var createdGenre1 = GenreFaker.Generate();
       var createdGenre2 = GenreFaker.Generate();
@@ -116,16 +116,16 @@ namespace GigKompassen.Test.Tests.Services
     [Fact]
     public async Task CanRemoveGenres()
     {
-      var genre1 = f.AddGenre();
-      var genre2 = f.AddGenre();
-      var genre3 = f.AddGenre();
-      var genre4 = f.AddGenre();
-      var genre5 = f.AddGenre();
-      var genre6 = f.AddGenre();
-      var genre7 = f.AddGenre();
-      var genre8 = f.AddGenre();
-      var genre9 = f.AddGenre();
-      var genre10 = f.AddGenre();
+      var genre1 = f.AddFakeGenre();
+      var genre2 = f.AddFakeGenre();
+      var genre3 = f.AddFakeGenre();
+      var genre4 = f.AddFakeGenre();
+      var genre5 = f.AddFakeGenre();
+      var genre6 = f.AddFakeGenre();
+      var genre7 = f.AddFakeGenre();
+      var genre8 = f.AddFakeGenre();
+      var genre9 = f.AddFakeGenre();
+      var genre10 = f.AddFakeGenre();
 
       var remove1and2 = await _genreService.RemoveGenresAsync(new List<Guid> { genre1.Id, genre2.Id });
       var remove3 = await _genreService.RemoveGenreAsync(genre3.Id);

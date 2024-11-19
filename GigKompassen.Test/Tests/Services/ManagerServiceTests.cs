@@ -18,7 +18,6 @@ namespace GigKompassen.Test.Tests.Services
   {
     private readonly ManagerService _managerService;
     private readonly ApplicationDbContext _context;
-    private readonly UserService _userService;
     private readonly MediaService _mediaService;
 
     private readonly FakeDataHelper f;
@@ -26,9 +25,8 @@ namespace GigKompassen.Test.Tests.Services
     public ManagerServiceTests() 
     {
       _context = GetInMemoryDbContext();
-      _userService = new UserService(_context, GetMockedUserManager(_context));
-      _mediaService = new MediaService(_context, _userService);
-      _managerService = new ManagerService(_context, _userService, _mediaService);
+      _mediaService = new MediaService(_context);
+      _managerService = new ManagerService(_context, _mediaService);
 
       f = new FakeDataHelper(_context);
     }
