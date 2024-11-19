@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GigKompassen.Blazor", "GigK
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GigKompassen.Blazor.Client", "GigKompassen.Blazor\GigKompassen.Blazor.Client\GigKompassen.Blazor.Client.csproj", "{3A77C8C2-557C-4A02-A42C-39DE06BA64FB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GigKompassen.ZMinimal", "GigKompassen.ZMinimal\GigKompassen.ZMinimal.csproj", "{2A8BD261-4A6F-467C-9F67-3336EB748301}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{3A77C8C2-557C-4A02-A42C-39DE06BA64FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3A77C8C2-557C-4A02-A42C-39DE06BA64FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3A77C8C2-557C-4A02-A42C-39DE06BA64FB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2A8BD261-4A6F-467C-9F67-3336EB748301}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A8BD261-4A6F-467C-9F67-3336EB748301}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A8BD261-4A6F-467C-9F67-3336EB748301}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A8BD261-4A6F-467C-9F67-3336EB748301}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

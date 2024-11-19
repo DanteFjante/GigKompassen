@@ -62,14 +62,14 @@ namespace GigKompassen.Web.Areas.Identity.Pages.Account
       }
 
       
-      if (user.ProfileCompleted)
+      if (user.RegistrationCompleted)
       {
         // Redirect to home page if profile is already completed
         return RedirectToAction("Index", new MessageViewModel("Redirected to Index Page as profile is already completed"));
       }
       
       AccountType = await GetUserRoleAsync(user);
-      ProfileCompleted = user.ProfileCompleted;
+      ProfileCompleted = user.RegistrationCompleted;
       ProfileCompleteMessage = "Profile already completed";
 
       /*
