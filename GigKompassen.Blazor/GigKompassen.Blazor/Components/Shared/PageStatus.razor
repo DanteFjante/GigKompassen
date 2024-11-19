@@ -8,12 +8,12 @@
   <div class="container-fluid">
     <div class="row">
       <div class="col-4">
-        @foreach (var topic in StatusCollection.GetSubjects())
+        @foreach (var subject in GetSubjects())
         {
-          foreach (var entry in StatusCollection.GetEntries(topic))
+          foreach (var entry in StatusCollection.GetEntries(subject))
           {
             <div class="alert alert-@entry.GetColor() alert-dismissible fade show position-relative" role="alert" @key="entry">
-              @if(entry.Instances == 1)
+              @if (entry.Instances == 1)
               {
                 <div class="alert-subject">@entry.Subject</div>
               }
@@ -27,7 +27,7 @@
 
               @if (!string.IsNullOrEmpty(entry.Link))
               {
-                <a href="@entry.Link" class="alert-link" target="_blank"> Click Here</a> <!-- Display link -->
+                <a href="@entry.Link" class="alert-link" target="_blank"> Click Here</a>
               }
 
               <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"
@@ -42,6 +42,9 @@
 }
 
 @code {
+
+  [Parameter]
+  public string Subjects { get; set; } = string.Empty;
 
   protected override void OnInitialized()
   {
@@ -68,4 +71,15 @@
       StatusCollection.OnChange -= UpdateStatus;
     }
   }
+
+  public List<string> GetSubjects() 	{
+    if(string.IsNullOrWhiteSpace(Subjects))
+		{
+			return StatusCollection.GetSubjects();
+		}
+		else
+		{
+			return Subjects.Split(';').Select(s => s.Trim()).ToList();
+		}
+	}
 }

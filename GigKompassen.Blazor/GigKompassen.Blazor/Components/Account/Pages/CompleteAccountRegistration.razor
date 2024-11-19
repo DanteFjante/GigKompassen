@@ -1,0 +1,19 @@
+﻿@page "/Account/complete-registration"
+
+@using GigKompassen.Blazor.Models.Status
+@using Microsoft.AspNetCore.Components.Authorization
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<AuthorizeView>
+  <Authorized>
+    <CompleteRegistration />
+  </Authorized>
+  <NotAuthorized>
+    <p> You need to be logged in to view this page.</p>
+  </NotAuthorized>
+</AuthorizeView>
+
+@code {
+
+}

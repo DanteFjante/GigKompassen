@@ -1,0 +1,37 @@
+﻿@using GigKompassen.Models.Profiles
+@using GigKompassen.Services
+
+@inject ManagerService managerService
+
+
+@if (Manager == null)
+{
+  <p>Loading manager information...</p>
+}
+else
+{
+<h3>View @Manager?.Name</h3>
+
+  <div>
+    <p><strong>Location:</strong> @Manager.Location</p>
+    <p><strong>Description:</strong></p>
+    <p>@Manager.Description</p>
+  </div>
+}
+
+@code {
+  [Parameter]
+  public Guid Id { get; set; }
+
+  private ManagerProfile? Manager;
+
+  protected override async Task OnParametersSetAsync()
+  {
+    await LoadManagerAsync();
+  }
+
+  private async Task LoadManagerAsync()
+  {
+    Manager = await managerService.GetAsync(Id);
+  }
+}

@@ -1,0 +1,13 @@
+﻿@page	"/Profiles"
+
+@using GigKompassen.Blazor.Components.Profile
+
+<h3>List Profiles</h3>
+<ListProfiles/>
+
+@code {
+
+	[Parameter]
+	public Guid? UserId { get; set; } = null;
+
+}

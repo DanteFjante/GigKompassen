@@ -1,48 +1,78 @@
 ﻿@page "/Account/ConfirmEmail"
 
+@rendermode InteractiveServer
+
 @using System.Text
+@using GigKompassen.Blazor.Models.Status
 @using GigKompassen.Models.Accounts
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
 
 @inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityRedirectManager RedirectManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject StatusCollection StatusCollection
 
 <PageTitle>Confirm email</PageTitle>
 
 <h1>Confirm email</h1>
+
 <StatusMessage Message="@statusMessage" />
 
+<PageStatus/>
+
+@if(isAuthorized)
+{
+  <CompleteRegistration/>
+}
+
 @code {
-    private string? statusMessage;
+  private string? statusMessage;
+  private bool isAuthorized = false;
 
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
 
-    [SupplyParameterFromQuery]
-    private string? UserId { get; set; }
+  [SupplyParameterFromQuery]
+  private string? UserId { get; set; }
 
-    [SupplyParameterFromQuery]
-    private string? Code { get; set; }
+  [SupplyParameterFromQuery]
+  private string? Code { get; set; }
 
-    protected override async Task OnInitializedAsync()
+  protected override async Task OnInitializedAsync()
+  {
+    if (UserId is null || Code is null)
     {
-        if (UserId is null || Code is null)
-        {
-            RedirectManager.RedirectTo("");
-        }
-
-        var user = await UserManager.FindByIdAsync(UserId);
-        if (user is null)
-        {
-            HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-            statusMessage = $"Error loading user with ID {UserId}";
-        }
-        else
-        {
-            var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
-            var result = await UserManager.ConfirmEmailAsync(user, code);
-            statusMessage = result.Succeeded ? "Thank you for confirming your email." : "Error confirming your email.";
-        }
+      RedirectManager.RedirectTo("");
     }
+
+    var user = await UserManager.FindByIdAsync(UserId);
+    if (user is null)
+    {
+      HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+      statusMessage = $"Error loading user with ID {UserId}";
+    }
+    else
+    {
+      var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
+      var result = await UserManager.ConfirmEmailAsync(user, code);
+      if(result.Succeeded)
+      {
+        StatusCollection.ClearEntries<CompleteRegistration>();
+        statusMessage = "Thank you for confirming your email.";
+        var auth  = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if(!SignInManager.IsSignedIn(auth.User))
+        {
+          await SignInManager.SignInAsync(user, isPersistent: false);
+        }
+        isAuthorized = true;
+      }
+      else
+      {
+        statusMessage = "Error confirming your email.";
+      }
+      StateHasChanged();
+    }
+  }
 }

@@ -1,0 +1,137 @@
+﻿@using GigKompassen.Blazor.Models.Status
+@using GigKompassen.Models.Accounts
+@using GigKompassen.Models.Profiles
+@using GigKompassen.Services
+@using Microsoft.AspNetCore.Identity
+
+@inject ILogger<CreateManagerProfile> Logger
+@inject StatusCollection StatusCollection
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject ManagerService ManagerService
+
+@if (IsAuthorized == null)
+{
+	<p>Loading...</p>
+}
+else if (IsAuthorized.HasValue && IsAuthorized.Value)
+{
+	<EditForm Model="this.Input" OnValidSubmit="SubmitProfile" FormName="CreateManagerProfile" @ref="this.editForm">
+		<DataAnnotationsValidator />
+		<ValidationSummary />
+
+
+		<h5>Create Manager Profile</h5>
+		<hr />
+
+		<!-- Name -->
+		<div class="form-group">
+			<label>Name</label>
+			<InputText @bind-Value="this.Input.Name" class="form-control" />
+			<ValidationMessage For="@(() => this.Input.Name)" />
+		</div>
+
+		<!-- Location -->
+		<div class="form-group">
+			<label>Location</label>
+			<InputText @bind-Value="this.Input.Location" class="form-control" />
+			<ValidationMessage For="@(() => this.Input.Location)" />
+		</div>
+
+
+		<!-- Description -->
+		<div class="form-group">
+			<label>Description</label>
+			<InputText @bind-Value="this.Input.Description" class="form-control" />
+			<ValidationMessage For="@(() => this.Input.Description)" />
+		</div>
+
+	</EditForm>
+}
+@code {
+
+	public ManagerProfile? ManagerProfile { get; set; }
+
+	private InputModel Input { get; set; } = new InputModel();
+	private EditForm? editForm;
+
+	private bool? IsAuthorized { get; set; }
+	private ApplicationUser? User { get; set; }
+
+	protected override async Task OnInitializedAsync()
+	{
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (!user.Identity!.IsAuthenticated)
+		{
+			IsAuthorized = false;
+			AddError("You must be logged in to create a profile. Please log in.", "/Account/Login");
+			return;
+		}
+		IsAuthorized = true;
+		User = await UserManager.GetUserAsync(user);
+	}
+
+	public async Task<ManagerProfile?> SubmitForm()
+	{
+		if (editForm != null && editForm.EditContext != null)
+		{
+			if (editForm.EditContext.Validate())
+			{
+				await editForm.OnValidSubmit.InvokeAsync(editForm.EditContext);
+				return ManagerProfile;
+			}
+			AddError("Failed to submit form as manager profile form was invalid.");
+		}
+		return null;
+	}
+
+	private async Task SubmitProfile()
+	{
+		if (ManagerProfile != null)
+		{
+			AddError("Manager profile already exists");
+			return;
+		}
+		else
+		{
+			try
+			{
+				ManagerProfile = await ManagerService.CreateAsync(User.Id, this.GetManagerDto());
+				AddSuccess("Manager profile created successfully", $"/Profile/Manager/{ManagerProfile.Id}");
+			}
+			catch (Exception e)
+			{
+				AddError("Failed to create manager profile");
+			}
+		}
+	}
+
+	private void AddError(string message, string? link = null)
+	{
+		var entry = StatusCollection.AddEntry<CreateManagerProfile>(StatusType.Danger, message, link);
+		Logger.LogError(entry.ToString());
+	}
+
+	private void AddSuccess(string message, string link = null)
+	{
+		var entry = StatusCollection.AddEntry<CreateManagerProfile>(StatusType.Success, message, link);
+		Logger.LogDebug(entry.ToString());
+	}
+
+	private CreateManagerDto GetManagerDto()
+	{
+		return new CreateManagerDto(
+			Input.Name,
+			Input.Description,
+			Input.Location
+		);
+	}
+
+	private class InputModel
+	{
+		public string Name { get; set; }
+		public string Location { get; set; }
+		public string Description { get; set; }
+	}
+}

@@ -1,0 +1,67 @@
+﻿@using GigKompassen.Models.Profiles
+@using GigKompassen.Services
+
+@inject ArtistService ArtistService
+
+<h3>View @Artist?.Name</h3>
+
+@if (Artist == null)
+{
+  <p>Loading artist information...</p>
+}
+else
+{
+
+  <div>
+      <p><strong>Location:</strong> @Artist.Location</p>
+      <p><strong>Availability:</strong> @Artist.Availability</p>
+      <p><strong>Bio:</strong></p>
+      <p>@Artist.Bio</p>
+      <p><strong>Description:</strong></p>
+      <p>@Artist.Description</p>
+
+      <h4>Genres</h4>
+      <ul>
+  @foreach (var genre in Artist.Genres)
+  {
+                <li>@genre.Name</li>
+  }
+      </ul>
+
+      <h4>Members</h4>
+      <table class="table">
+          <thead>
+              <tr>
+                  <th>Name</th>
+                  <th>Role</th>
+              </tr>
+          </thead>
+          <tbody>
+    @foreach (var member in Artist.Members)
+    {
+                    <tr>
+                        <td>@member.Name</td>
+                        <td>@member.Role</td>
+                    </tr>
+    }
+          </tbody>
+      </table>
+  </div>
+}
+
+@code {
+  [Parameter]
+  public Guid Id { get; set; }
+
+  private ArtistProfile? Artist;
+
+  protected override async Task OnParametersSetAsync()
+  {
+    await LoadArtistAsync();
+  }
+
+  private async Task LoadArtistAsync()
+  {
+    Artist = await ArtistService.GetAsync(Id);
+  }
+}

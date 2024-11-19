@@ -29,9 +29,9 @@
       return GetEntries(GetName<T>());
     }
 
-    public void AddEntry<T>(StatusType type, string message, string? link = null)
+    public StatusEntry AddEntry<T>(StatusType type, string message, string? link = null)
     {
-      AddEntry(type, message, GetName<T>(), link);
+      return AddEntry(type, message, GetName<T>(), link);
     }
 
     public void ClearEntries<T>()
@@ -46,14 +46,14 @@
       OnChange?.Invoke();
     }
 
-    public void AddEntry(StatusType type, string message, string subject, string? link = null)
+    public StatusEntry AddEntry(StatusType type, string message, string subject, string? link = null)
     {
       if (StatusEntries.Any(x => x.Type == type && x.Message == message && x.Subject == subject && x.Link == link))
       {
         var entry = StatusEntries.First(x => x.Type == type && x.Message == message && x.Subject == subject && x.Link == link);
         entry.Instances++;
         OnChange?.Invoke();
-        return;
+        return entry;
       }
 
       var statusEntry = new StatusEntry
@@ -66,6 +66,7 @@
       StatusEntries.Add(statusEntry);
       OnStatusAdded?.Invoke(statusEntry);
       OnChange?.Invoke();
+      return statusEntry;
     }
 
     public void ClearEntries(string? subject = null)

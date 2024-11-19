@@ -1,0 +1,223 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using GigKompassen.Blazor.Models.Status
+@using GigKompassen.Enums
+@using GigKompassen.Models.Profiles
+@using GigKompassen.Services
+
+@inject SceneService SceneService
+@inject NavigationManager NavigationManager
+@inject StatusCollection StatusCollection
+
+
+@if (IsLoading)
+{
+  <p>Loading scene information...</p>
+}
+else if (Input != null)
+{
+  <h3>Edit @Input?.Profile.Name</h3>
+  <EditForm Model="Input" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <!-- Profile Fields -->
+    <div class="mb-3">
+      <label for="name" class="form-label">Name</label>
+      <InputText id="name" class="form-control" @bind-Value="Input.Profile.Name" />
+    </div>
+
+    <div class="mb-3">
+      <label for="adress" class="form-label">Address</label>
+      <InputText id="adress" class="form-control" @bind-Value="Input.Profile.Address" />
+    </div>
+
+    <div class="mb-3">
+      <label for="venuetype" class="form-label">Venue Type</label>
+      <InputText id="venuetype" class="form-control" @bind-Value="Input.Profile.VenueType" />
+    </div>
+
+    <div class="mb-3">
+      <label for="contactinfo" class="form-label">Contact Info</label>
+      <InputText id="contactinfo" class="form-control" @bind-Value="Input.Profile.ContactInfo" />
+    </div>
+
+    <div class="mb-3">
+      <label for="capacity" class="form-label">Capacity</label>
+      <InputNumber id="capacity" class="form-control" @bind-Value="Input.Profile.Capacity" />
+    </div>
+
+
+    <div class="mb-3">
+      <label for="bio" class="form-label">Bio</label>
+      <InputTextArea id="bio" class="form-control" @bind-Value="Input.Profile.Bio" />
+    </div>
+
+    <div class="mb-3">
+      <label for="description" class="form-label">Description</label>
+      <InputTextArea id="description" class="form-control" @bind-Value="Input.Profile.Description" />
+    </div>
+
+    <div class="mb-3">
+      <label for="amenities" class="form-label">Amenities</label>
+      <InputTextArea id="amenities" class="form-control" @bind-Value="Input.Profile.Amenities" />
+    </div>
+
+    <div class="mb-3">
+      <label for="openinghours" class="form-label">Opening Hours</label>
+      <InputTextArea id="openinghours" class="form-control" @bind-Value="Input.Profile.OpeningHours" />
+    </div>
+
+    <!-- Genres -->
+    <h4>Genres</h4>
+    @for (int i = 0; i < Input.Genres.Count; i++)
+    {
+      var index = i;
+      <div class="input-group mb-2">
+        <InputText class="form-control" @bind-Value="Input.Genres[index]" placeholder="Genre" />
+        <button type="button" class="btn btn-danger" @onclick="() => RemoveGenre(index)">Remove</button>
+      </div>
+    }
+    <button type="button" class="btn btn-primary mb-3" @onclick="AddGenre">Add Genre</button>
+
+    <!-- Submit Button -->
+    <button type="submit" class="btn btn-success">Save Changes</button>
+  </EditForm>
+}
+else
+{
+  <p>Error loading scene information.</p>
+}
+
+@code {
+  [Parameter]
+  public Guid Id { get; set; }
+
+  private InputModel? Input;
+  private bool IsLoading = true;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await LoadArtistAsync();
+  }
+
+  private async Task LoadArtistAsync()
+  {
+    IsLoading = true;
+    try
+    {
+      var scene = await SceneService.GetAsync(Id);
+      if (scene != null)
+      {
+        Input = new InputModel
+          {
+            Profile = new SceneProfileViewModel
+            {
+              Name = scene.Name,
+              Address = scene.Address,
+              VenueType = scene.VenueType,
+              ContactInfo = scene.ContactInfo,
+              Capacity = scene.Capacity,
+              Bio = scene.Bio,
+              Description = scene.Description,
+              Amenities = scene.Amenities,
+              OpeningHours = scene.OpeningHours,
+            },
+            Genres = scene.Genres?.Select(g => g.Name).ToList() ?? new List<string>()
+          };
+      }
+    }
+    finally
+    {
+      IsLoading = false;
+    }
+  }
+
+  private async Task HandleValidSubmit()
+  {
+    var updateArtistDto = GetSceneDto();
+    var genres = GetGenres();
+
+    // Update the artist profile using the service
+    var result = await SceneService.UpdateAsync(Id, updateArtistDto, genres);
+    if (result != null)
+    {
+      // Navigate back to the artist profile page
+      NavigationManager.NavigateTo($"/Profile/{Id}");
+    }
+    else
+    {
+      // Handle update failure (e.g., show an error message)
+    }
+  }
+
+  private void AddGenre()
+  {
+    Input.Genres.Add(string.Empty);
+  }
+
+  private void RemoveGenre(int index)
+  {
+    Input.Genres.RemoveAt(index);
+  }
+
+  private List<string> GetGenres()
+  {
+    return Input.Genres.Where(g => !string.IsNullOrWhiteSpace(g)).ToList();
+  }
+
+  private UpdateSceneDto GetSceneDto()
+  {
+    return new UpdateSceneDto
+    (
+      Input.Profile.Name,
+      Input.Profile.Address,
+      Input.Profile.VenueType,
+      Input.Profile.ContactInfo,
+      Input.Profile.Capacity,
+      Input.Profile.Bio,
+      Input.Profile.Description,
+      Input.Profile.Amenities,
+      Input.Profile.OpeningHours
+    );
+  }
+
+  // Input models for data binding and validation
+  private class InputModel
+  {
+    public SceneProfileViewModel Profile { get; set; } = new();
+    public List<string> Genres { get; set; } = new();
+  }
+
+  private class SceneProfileViewModel
+  {
+    [Required(ErrorMessage = "Name is required")]
+    [MinLength(3, ErrorMessage = "Name must be at least 3 characters")]
+    [MaxLength(30, ErrorMessage = "Name cannot exceed 30 characters")]
+    public string Name { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Address is required")]
+    public string Address { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Venue Type is required")]
+    public string VenueType { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Contact Info is required")]
+    public string ContactInfo { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Capacity is required")]
+    public int Capacity { get; set; } = 0;
+
+    [Required(ErrorMessage = "Bio is required")]
+    public string Bio { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Description is required")]
+    public string Description { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Amenities is required")]
+    public string Amenities { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Opening Hours is required")]
+    public string OpeningHours { get; set; } = string.Empty;
+
+  }
+}

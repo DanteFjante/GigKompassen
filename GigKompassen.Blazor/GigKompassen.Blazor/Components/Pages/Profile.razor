@@ -1,0 +1,60 @@
+﻿@page "/Profile/{Id:guid}"
+
+@rendermode InteractiveServer
+
+@using GigKompassen.Blazor.Components.Profile
+@using GigKompassen.Models.Profiles
+@using GigKompassen.Services
+
+@inject ProfileService ProfileService
+
+<h3>Profile</h3>
+<label>
+    <input type="checkbox" @bind="EditMode" /> Edit mode
+</label>
+
+@if (EditMode)
+{
+  if(profile is ArtistProfile)
+  {
+      <EditArtistProfile Id="@Id" /> 
+  }
+  else if(profile is ManagerProfile)
+  {
+  	<EditManagerProfile Id="@Id" />
+  }
+	else if(profile is SceneProfile)
+  {
+    <EditSceneProfile Id="@Id" />
+  }
+}
+else
+{
+  if(profile is ArtistProfile)
+  {
+    <ViewArtistProfile Id="@Id" />
+  }
+  else if(profile is ManagerProfile)
+	{
+		<ViewManagerProfile Id="@Id" />
+	}
+  else if(profile is SceneProfile)
+	{
+		<ViewSceneProfile Id="@Id" />
+	}
+}
+
+@code {
+  [Parameter]
+  public Guid Id { get; set; }
+
+  [Parameter]
+  public bool EditMode { get; set; } = false;
+
+  private BaseProfile? profile;
+
+  protected override async Task OnInitializedAsync()
+	{
+			profile = await ProfileService.GetByIdAsync(Id);
+	}
+}

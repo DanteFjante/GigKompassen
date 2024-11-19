@@ -1,0 +1,284 @@
+﻿@using GigKompassen.Blazor.Models.Status
+@using GigKompassen.Enums
+@using GigKompassen.Models.Accounts
+@using GigKompassen.Models.Profiles
+@using GigKompassen.Services
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Identity
+@using GigKompassen.Blazor.Components.Account.Shared
+@using System.ComponentModel.DataAnnotations
+
+@inject ILogger<CreateArtistProfile> Logger
+@inject StatusCollection StatusCollection
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject ArtistService ArtistService
+
+@if(IsAuthorized == null)
+{
+	<p>Loading...</p>
+}
+else if(IsAuthorized.HasValue && IsAuthorized.Value)
+{
+	<EditForm Model="this.Input" OnValidSubmit="SubmitProfile" FormName="CreateArtistProfile" @ref="this.editForm">
+		<DataAnnotationsValidator />
+		<ValidationSummary />
+	
+
+		<h5>Create Artist Profile</h5>
+		<hr />
+	
+		<!-- Name -->
+		<div class="form-group">
+			<label>Name</label>
+			<InputText @bind-Value="this.Input.Profile.Name" class="form-control" />
+			<ValidationMessage For="@(() => this.Input.Profile.Name)" />
+		</div>
+
+		<!-- Location -->
+		<div class="form-group">
+			<label>Location</label>
+			<InputText @bind-Value="this.Input.Profile.Location" class="form-control" />
+			<ValidationMessage For="@(() => this.Input.Profile.Location)" />
+		</div>
+
+		<!-- Availability -->
+		<div class="form-group">
+			<label>Availability</label>
+			<InputSelect @bind-Value="this.Input.Profile.Availability" class="form-control">
+				@foreach (AvailabilityStatus status in Enum.GetValues(typeof(AvailabilityStatus)))
+				{
+					<option value="@status">@status</option>
+				}
+			</InputSelect>
+			<ValidationMessage For="@(() => this.Input.Profile.Availability)" />
+		</div>
+
+		<!-- Bio -->
+		<div class="form-group">
+			<label>Bio</label>
+			<InputTextArea @bind-Value="this.Input.Profile.Bio" class="form-control" />
+			<ValidationMessage For="@(() => this.Input.Profile.Bio)" />
+		</div>
+
+		<!-- Description -->
+		<div class="form-group">
+			<label>Description</label>
+			<InputTextArea @bind-Value="this.Input.Profile.Description" class="form-control" />
+			<ValidationMessage For="@(() => this.Input.Profile.Description)" />
+		</div>
+
+		<!-- Genres -->
+		<div class="form-group">
+			<label>Genres</label>
+			<table class="table">
+				<thead>
+					<tr>
+						<th>Name</th>
+						<th>
+							<button type="button" @onclick="AddGenre" class="btn btn-sm btn-success">Add Genre</button>
+						</th>
+					</tr>
+				</thead>
+				<tbody>
+					@for (int i = 0; i < this.Input.Genres.Count; i++)
+					{
+						var index = i;
+						<tr>
+							<td>
+								<InputText @bind-Value="this.Input.Genres[index]" class="form-control" />
+							</td>
+							<td>
+								<!-- This will delete the current row, as it refers to the specific index 'i' in this.Input iteration -->
+								<button type="button" @onclick="() => RemoveGenre(index)" class="btn btn-sm btn-danger">Delete</button>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+
+		<!-- Artist Members -->
+		<div class="form-group">
+			<label>Artist Members</label>
+			<table class="table">
+				<thead>
+					<tr>
+						<th>Name</th>
+						<th>Role</th>
+						<th>
+							<button type="button" @onclick="AddMember" class="btn btn-sm btn-success">Add Member</button>
+						</th>
+					</tr>
+				</thead>
+				<tbody>
+					@for (int i = 0; i < this.Input.Members.Count; i++)
+					{
+						var index = i;
+						<tr>
+							<td>
+								<InputText @bind-Value="this.Input.Members[index].Name" class="form-control" />
+							</td>
+							<td>
+								<InputText @bind-Value="this.Input.Members[index].Role" class="form-control" />
+							</td>
+							<td>
+								<!-- This will delete the current row, as it refers to the specific index 'i' in this iteration -->
+								<button type="button" @onclick="() => RemoveMember(index)" class="btn btn-sm btn-danger">Delete</button>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	</EditForm>
+}
+
+@code {
+
+	public ArtistProfile? ArtistProfile { get; set; }
+
+	private InputModel Input { get; set; } = new InputModel();
+	private EditForm? editForm;
+
+	private bool? IsAuthorized { get; set; }
+	private ApplicationUser? User { get; set; }
+
+	protected override async Task OnInitializedAsync()
+	{
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (!user.Identity!.IsAuthenticated)
+		{
+			IsAuthorized = false;
+			AddError("You must be logged in to create a profile. Please log in.", "/Account/Login");
+			return;
+		}
+		IsAuthorized = true;
+		User = await UserManager.GetUserAsync(user);
+	}
+
+	public async Task<ArtistProfile?> SubmitForm()
+	{
+		if (editForm != null && editForm.EditContext != null)
+		{
+			if(editForm.EditContext.Validate())
+			{
+				await editForm.OnValidSubmit.InvokeAsync(editForm.EditContext);
+				return ArtistProfile;
+			}
+			AddError("Failed to submit form as artist profile form was invalid.");
+		}
+		return null;
+	}
+
+	private async Task SubmitProfile()
+	{
+		if(ArtistProfile != null)
+		{
+			AddError("Artist profile already exists");
+			return;
+		}
+		else
+		{
+			try
+			{
+				ArtistProfile = await ArtistService.CreateAsync(User.Id, this.GetArtistDto(), this.GetGenres(), this.GetMemberDtos());
+				AddSuccess("Artist profile created successfully", $"/Profile/Artist/{ArtistProfile.Id}");
+			} 
+			catch (Exception e)
+			{
+				AddError("Failed to create artist profile");
+			}
+		}
+	}
+
+	private void AddError(string message, string? link = null)
+	{
+		var entry = StatusCollection.AddEntry<CreateArtistProfile>(StatusType.Danger, message, link);
+		Logger.LogError(entry.ToString());
+	}
+
+	private void AddSuccess(string message, string link = null)
+	{
+		var entry = StatusCollection.AddEntry<CreateArtistProfile>(StatusType.Success, message, link);
+		Logger.LogDebug(entry.ToString());
+	}
+
+	private void AddGenre()
+	{
+		this.Input.Genres.Add("");
+	}
+	private void RemoveGenre(int index)
+	{
+		this.Input.Genres.RemoveAt(index);
+	}
+	private void AddMember()
+	{
+		this.Input.Members.Add(new ArtistMemberViewModel());
+	}
+	private void RemoveMember(int index)
+	{
+		this.Input.Members.RemoveAt(index);
+	}
+
+	private List<ArtistMemberDto> GetMemberDtos()
+	{
+		return this.Input.Members.Select(m => new ArtistMemberDto(Guid.NewGuid(), m.Name, m.Role)).ToList();
+	}
+
+	private List<string> GetGenres()
+	{
+		return this.Input.Genres;
+	}
+
+	private CreateArtistDto GetArtistDto()
+	{
+		return new CreateArtistDto(
+			this.Input.Profile.Name, 
+			this.Input.Profile.Location, 
+			this.Input.Profile.Bio, 
+			this.Input.Profile.Description, 
+			this.Input.Profile.Availability, true);
+	}
+
+	private class InputModel
+	{
+		public ArtistProfileViewModel Profile { get; set; } = new ArtistProfileViewModel();
+		public List<string> Genres { get; set; } = new List<string>();
+		public List<ArtistMemberViewModel> Members { get; set; } = new List<ArtistMemberViewModel>();
+	}
+
+	private class ArtistProfileViewModel
+	{
+		[Required]
+		[MinLength(3, ErrorMessage = "Artist name must be at least 3 characters long")]
+		[MaxLength(30, ErrorMessage = "Artist name can't be longer than 30 characters")]
+		public string Name { get; set; } = string.Empty;
+
+		[Required]
+		public string Location { get; set; } = string.Empty;
+		
+		[Required]
+		public AvailabilityStatus Availability { get; set; } = AvailabilityStatus.Open;
+		
+		[Required]
+		public string Bio { get; set; } = string.Empty;
+		
+		[Required]
+		public string Description { get; set; } = string.Empty;
+	}
+
+	private class ArtistMemberViewModel
+	{
+		[Required]
+		[MinLength(3, ErrorMessage = "Name must be at least 3 characters long")]
+		[MaxLength(30, ErrorMessage = "Name can't be longer than 30 characters")]
+		public string Name { get; set; } = string.Empty;
+
+		[Required]
+		public string Role { get; set; } = string.Empty;
+	}
+}

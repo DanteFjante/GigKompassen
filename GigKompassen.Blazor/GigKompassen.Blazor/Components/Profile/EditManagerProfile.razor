@@ -1,0 +1,133 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using GigKompassen.Blazor.Models.Status
+@using GigKompassen.Enums
+@using GigKompassen.Models.Profiles
+@using GigKompassen.Services
+
+@inject ManagerService ManagerService
+@inject NavigationManager NavigationManager
+@inject StatusCollection StatusCollection
+
+
+@if (IsLoading)
+{
+  <p>Loading manager information...</p>
+}
+else if (Input != null)
+{
+  <h3>Edit @Input?.Profile.Name</h3>
+  <EditForm Model="Input" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <!-- Profile Fields -->
+    <div class="mb-3">
+      <label for="name" class="form-label">Name</label>
+      <InputText id="name" class="form-control" @bind-Value="Input.Profile.Name" />
+    </div>
+
+    <div class="mb-3">
+      <label for="location" class="form-label">Location</label>
+      <InputText id="location" class="form-control" @bind-Value="Input.Profile.Location" />
+    </div>
+
+    <div class="mb-3">
+      <label for="description" class="form-label">Description</label>
+      <InputTextArea id="description" class="form-control" @bind-Value="Input.Profile.Description" />
+    </div>
+
+    <!-- Submit Button -->
+    <button type="submit" class="btn btn-success">Save Changes</button>
+  </EditForm>
+}
+else
+{
+  <p>Error loading manager information.</p>
+}
+
+@code {
+  [Parameter]
+  public Guid Id { get; set; }
+
+  private InputModel? Input;
+  private bool IsLoading = true;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await LoadArtistAsync();
+  }
+
+  private async Task LoadArtistAsync()
+  {
+    IsLoading = true;
+    try
+    {
+      var manager = await ManagerService.GetAsync(Id);
+      if (manager != null)
+      {
+        Input = new InputModel
+          {
+            Profile = new ManagerProfileViewModel
+            {
+              Name = manager.Name,
+              Location = manager.Location,
+              Description = manager.Description
+            },
+          };
+      }
+      else
+      {
+        // Handle case where artist is not found
+      }
+    }
+    finally
+    {
+      IsLoading = false;
+    }
+  }
+
+  private async Task HandleValidSubmit()
+  {
+    var updateArtistDto = GetManagerDto();
+
+    // Update the artist profile using the service
+    var result = await ManagerService.UpdateAsync(Id, updateArtistDto);
+    if (result != null)
+    {
+      // Navigate back to the artist profile page
+      NavigationManager.NavigateTo($"/Profile/{Id}");
+    }
+    
+  }
+
+
+  private UpdateManagerDto GetManagerDto()
+  {
+    return new UpdateManagerDto
+    (
+      Input.Profile.Name,
+      Input.Profile.Description,
+      Input.Profile.Location
+    );
+  }
+
+  // Input models for data binding and validation
+  private class InputModel
+  {
+    public ManagerProfileViewModel Profile { get; set; } = new();
+  }
+
+  private class ManagerProfileViewModel
+  {
+    [Required(ErrorMessage = "Name is required")]
+    [MinLength(3, ErrorMessage = "Name must be at least 3 characters")]
+    [MaxLength(30, ErrorMessage = "Name cannot exceed 30 characters")]
+    public string Name { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Location is required")]
+    public string Location { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Description is required")]
+    public string Description { get; set; } = string.Empty;
+  }
+}

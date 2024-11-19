@@ -1,9 +1,26 @@
 ﻿@page "/"
 
+@rendermode InteractiveServer
+
+@inject StatusCollection StatusCollection
+
+@using System.ComponentModel.DataAnnotations
+@using GigKompassen.Blazor.Components.Account.Shared
+@using GigKompassen.Blazor.Components.Shared
+@using GigKompassen.Blazor.Models.Status
+
 <PageTitle>Home</PageTitle>
+
+
+<PageStatus></PageStatus>
 
 <h1>Hello, world!</h1>
 
 Welcome to your new app.
 
-<GigKompassen.Blazor.Components.Account.Shared.CompleteProfile/>
+
+@code {
+
+	private CompleteRegistration? completeRegistration;
+
+}

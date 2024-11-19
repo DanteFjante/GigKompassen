@@ -1,0 +1,53 @@
+﻿@using GigKompassen.Models.Profiles
+@using GigKompassen.Services
+
+@inject SceneService sceneService
+
+
+@if (Scene == null)
+{
+  <p>Loading artist information...</p>
+}
+else
+{
+
+<h3>View @Scene?.Name</h3>
+  <div>
+    <p><strong>Address:</strong> @Scene.Address</p>
+    <p><strong>VenueType:</strong> @Scene.VenueType</p>
+    <p><strong>ContactInformation:</strong> @Scene.ContactInfo</p>
+    <p><strong>Capactity:</strong> @Scene.Capacity</p>
+    <p><strong>Bio:</strong></p>
+    <p>@Scene.Bio</p>
+    <p><strong>Description:</strong></p>
+    <p>@Scene.Description</p>
+    <p><strong>Amenities:</strong> @Scene.Amenities</p>
+    <p><strong>OpeningHours:</strong> @Scene.OpeningHours</p>
+
+    <h4>Genres</h4>
+    <ul>
+      @foreach (var genre in Scene.Genres)
+      {
+        <li>@genre.Name</li>
+      }
+    </ul>
+
+  </div>
+}
+
+@code {
+  [Parameter]
+  public Guid Id { get; set; }
+
+  private SceneProfile? Scene;
+
+  protected override async Task OnParametersSetAsync()
+  {
+    await LoadSceneAsync();
+  }
+
+  private async Task LoadSceneAsync()
+  {
+    Scene = await sceneService.GetAsync(Id);
+  }
+}

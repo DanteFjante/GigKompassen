@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GigKompassen.Blazor.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20241112093607_mssql.local_migration_495")]
-    partial class mssqllocal_migration_495
+    [Migration("20241112180053_mssql.local_migration_975")]
+    partial class mssqllocal_migration_975
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -138,7 +138,7 @@ namespace GigKompassen.Blazor.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("ProfileCompleted")
+                    b.Property<bool>("RegistrationCompleted")
                         .HasColumnType("bit");
 
                     b.Property<string>("SecurityStamp")
@@ -715,13 +715,13 @@ namespace GigKompassen.Blazor.Migrations
                     b.HasOne("GigKompassen.Models.Profiles.BaseProfile", "Profile")
                         .WithMany()
                         .HasForeignKey("ProfileId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.HasOne("GigKompassen.Models.Accounts.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Profile");
@@ -734,7 +734,7 @@ namespace GigKompassen.Blazor.Migrations
                     b.HasOne("GigKompassen.Models.Media.MediaGalleryOwner", "MediaGalleryOwner")
                         .WithOne()
                         .HasForeignKey("GigKompassen.Models.Chats.Chat", "MediaGalleryOwnerId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("MediaGalleryOwner");
@@ -755,12 +755,13 @@ namespace GigKompassen.Blazor.Migrations
 
                     b.HasOne("GigKompassen.Models.Chats.ChatMessage", "ReplyTo")
                         .WithMany()
-                        .HasForeignKey("ReplyToId");
+                        .HasForeignKey("ReplyToId")
+                        .OnDelete(DeleteBehavior.ClientNoAction);
 
                     b.HasOne("GigKompassen.Models.Chats.ChatParticipant", "Sender")
                         .WithMany("Messages")
                         .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.ClientNoAction)
                         .IsRequired();
 
                     b.Navigation("Chat");
@@ -777,13 +778,13 @@ namespace GigKompassen.Blazor.Migrations
                     b.HasOne("GigKompassen.Models.Chats.Chat", "Chat")
                         .WithMany("Participants")
                         .HasForeignKey("ChatId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("GigKompassen.Models.Accounts.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Chat");
@@ -796,7 +797,7 @@ namespace GigKompassen.Blazor.Migrations
                     b.HasOne("GigKompassen.Models.Media.MediaGalleryOwner", "Owner")
                         .WithMany("Galleries")
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Owner");
@@ -807,7 +808,7 @@ namespace GigKompassen.Blazor.Migrations
                     b.HasOne("GigKompassen.Models.Media.MediaGallery", "Gallery")
                         .WithMany("Items")
                         .HasForeignKey("GalleryId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("GigKompassen.Models.Media.MediaLink", "MediaLink")
@@ -825,7 +826,7 @@ namespace GigKompassen.Blazor.Migrations
                     b.HasOne("GigKompassen.Models.Accounts.ApplicationUser", "Uploader")
                         .WithMany()
                         .HasForeignKey("UploaderId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Uploader");
@@ -836,7 +837,7 @@ namespace GigKompassen.Blazor.Migrations
                     b.HasOne("GigKompassen.Models.Profiles.ArtistProfile", "ArtistProfile")
                         .WithMany("Members")
                         .HasForeignKey("ArtistProfileId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("ArtistProfile");
@@ -847,13 +848,13 @@ namespace GigKompassen.Blazor.Migrations
                     b.HasOne("GigKompassen.Models.Media.MediaGalleryOwner", "MediaGalleryOwner")
                         .WithOne()
                         .HasForeignKey("GigKompassen.Models.Profiles.BaseProfile", "MediaGalleryOwnerId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("GigKompassen.Models.Accounts.ApplicationUser", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("MediaGalleryOwner");

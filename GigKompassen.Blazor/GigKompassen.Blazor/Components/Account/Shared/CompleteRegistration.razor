@@ -1,0 +1,239 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using GigKompassen.Blazor.Models.Status
+@using GigKompassen.Models.Accounts
+@using GigKompassen.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using GigKompassen.Blazor.Components.Profile
+
+@inject ILogger<CompleteRegistration> Logger
+@inject StatusCollection StatusCollection;
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject UserService UserService;
+
+
+
+@if(IsAuthorized == null)
+{
+  <p>Loading Complete Registration Form...</p>
+}
+else if(IsAuthorized.Value)
+{
+  <div class="container">
+    <hr />
+    <h4>Complete your registration</h4>
+    <hr />
+    <div class="row">
+      <div class="col-md-10">
+        @if (!RegistrationCompleted)
+        {
+        <EditForm Model="Input" OnValidSubmit="SubmitProfile" FormName="CompleteRegistration" @ref="editForm">
+          <DataAnnotationsValidator />
+          <ValidationSummary class="text-danger" role="alert" />
+
+          <!-- First Name -->
+          <div class="form-floating mb-3">
+            <InputText @bind-Value="Input.FirstName" id="FirstName" class="form-control" autocomplete="given-name" placeholder="First Name"  />
+            <label for="FirstName" class="form-label">First Name</label>
+            <ValidationMessage For="@(() => Input.FirstName)" class="text-danger" />
+          </div>
+
+          <!-- Last Name -->
+          <div class="form-floating mb-3">
+            <InputText @bind-Value="Input.LastName" id="LastName" class="form-control" autocomplete="family-name" placeholder="Last Name" />
+            <label for="LastName" class="form-label">Last Name</label>
+            <ValidationMessage For="@(() => Input.LastName)" class="text-danger" />
+          </div>
+
+          </EditForm>
+        }
+        else
+        {
+          <p>Your registration is already completed.</p>
+
+        }
+        @if (!HasProfile)
+        {
+          <!-- Profile Type Selection -->
+          <div class="form-floating mb-3">
+            <InputSelect @bind-Value="SelectedProfileType" id="SelectedProfileType" class="form-control">
+              <option value="" selected="true"> Profile Type</option>
+              @foreach (var type in Enum.GetValues<ProfileType>())
+              {
+                <option value="@type" >@type</option>
+              }
+            </InputSelect>
+            <label for="ProfileTypeSelection">Profile Type</label>
+          </div>
+          <!-- Conditional Fields Based on ProfileTypeSelection -->
+          @if (SelectedProfileType == ProfileType.Artist)
+          {
+            <hr />
+            <CreateArtistProfile @ref="createArtist" />
+          }
+          else if (SelectedProfileType == ProfileType.Scene)
+          {
+            <hr />
+            <CreateSceneProfile @ref="createScene"/>
+          }
+          else if (SelectedProfileType == ProfileType.Manager)
+          {
+            <hr />
+            <CreateManagerProfile @ref="createManager"/>
+          }
+        }
+        else
+			  {
+				  <p>You already have a profile.</p>
+			  }
+        @if((!RegistrationCompleted || !HasProfile) && StandAlone)
+				{
+					<button type="button" class="btn btn-primary" @onclick="SubmitForm">Submit</button>
+				}
+      </div>
+    </div>
+  </div>
+<hr />
+}
+
+@code {
+
+  public bool RegistrationCompleted {get; set; }
+  public bool HasProfile {get; set; }
+
+  [Parameter]
+  public bool StandAlone { get; set; } = true;
+
+  private EditForm? editForm;
+  private CreateArtistProfile? createArtist;
+  private CreateSceneProfile? createScene;
+  private CreateManagerProfile? createManager;
+
+  private InputModel? Input { get; set; } = new InputModel();
+  private ProfileType? SelectedProfileType { get; set; } = null;
+
+  private bool? IsAuthorized {get; set; }
+  private ApplicationUser? User { get; set; }
+
+  protected override async Task OnInitializedAsync()
+  {
+    var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    var user = authState.User;
+    if (!user.Identity!.IsAuthenticated)
+    {
+      IsAuthorized = false;
+      AddError("You must be logged in to complete your registration. Please log in.", "/Account/Login");
+      return;
+    }
+    IsAuthorized = true;
+    User = await UserManager.GetUserAsync(user);
+    if(User != null)
+    {
+      RegistrationCompleted = User.RegistrationCompleted;
+      HasProfile = await UserService.UserHasProfile(User.Id);
+    }
+
+  }
+
+
+  public async Task SubmitForm()
+  {
+    if(editForm != null && editForm.EditContext != null)
+    {
+      if(editForm.EditContext.Validate())       
+      {
+        await editForm.OnValidSubmit.InvokeAsync(editForm.EditContext);
+      }
+    }
+    else
+    {
+      AddError("Complete-Registration-form is not valid.");
+    }
+  }
+  
+  private void OnProfileTypeSelectionChanged(EventArgs e)
+  {
+    StateHasChanged();
+  }
+
+  private void AddError(string error, string? link = null)
+  {
+    var entry = StatusCollection.AddEntry<CompleteRegistration>(StatusType.Danger, error, link);
+    Logger.LogError(entry.ToString());
+  }
+
+  private void AddSuccess(string message, string? link = null)
+  {
+    var entry = StatusCollection.AddEntry<CompleteRegistration>(StatusType.Success, message, link);
+    Logger.LogDebug(entry.ToString());
+  }
+
+  private async Task SubmitProfile()
+  {
+    if(SelectedProfileType == null)
+    {
+      AddError("Please select a profile type.");
+      return;
+    }
+    else if(SelectedProfileType == ProfileType.Artist)
+    {
+      var artistProfile = await createArtist.SubmitForm();
+      if(artistProfile == null)
+      {
+        AddError("Could not create artist profile.");
+        StateHasChanged();
+        return;
+      }
+    }
+    else if(SelectedProfileType == ProfileType.Scene)
+		{
+			var sceneProfile = await createScene.SubmitForm();
+      if (sceneProfile == null)
+      {
+        AddError("Could not create scene profile.");
+        StateHasChanged();
+        return;
+      }
+		}
+		else if(SelectedProfileType == ProfileType.Manager)
+		{
+			var managerProfile = await createManager.SubmitForm();
+      if (managerProfile == null)
+      {
+        AddError("Could not create manager profile.");
+        StateHasChanged();
+        return;
+      }
+		}
+    
+    if(!await UserService.CompleteUserRegistrationAsync(User.Id, Input.FirstName, Input.LastName))
+    {
+      AddError("Failed to complete profile.");
+      return;
+    }
+
+    AddSuccess("Profile completed successfully.");
+  }
+
+  private enum ProfileType
+  {
+    Artist,
+    Scene,
+    Manager
+  }
+
+  private class InputModel
+  {
+    [Required]
+    [Display(Name = "First Name")]
+    public string FirstName { get; set; } = "";
+
+    [Required]
+    [Display(Name = "Last Name")]
+    public string LastName { get; set; } = "";
+
+  }
+
+
+}

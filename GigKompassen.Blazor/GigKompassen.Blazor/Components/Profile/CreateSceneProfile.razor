@@ -1,0 +1,258 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using GigKompassen.Blazor.Models.Status
+@using GigKompassen.Models.Accounts
+@using GigKompassen.Models.Profiles
+@using GigKompassen.Services
+@using Microsoft.AspNetCore.Identity
+
+@inject ILogger<CreateSceneProfile> Logger
+@inject StatusCollection StatusCollection
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject SceneService SceneService
+@if (IsAuthorized == null)
+{
+	<p>Loading...</p>
+}
+else if (IsAuthorized.HasValue && IsAuthorized.Value)
+{
+  <EditForm Model="this.Input" OnValidSubmit="SubmitProfile" FormName="CreateSceneProfile" @ref="this.editForm">
+	  <DataAnnotationsValidator />
+	  <ValidationSummary />
+	
+
+	  <h5>Create Artist Profile</h5>
+	  <hr />
+
+    <!-- Name -->
+    <div class="form-group">
+      <label>Name</label>
+      <InputText @bind-Value="this.Input.Profile.Name" class="form-control" />
+      <ValidationMessage For="@(() => this.Input.Profile.Name)" />
+    </div>
+
+    <!-- Address -->
+    <div class="form-group">
+      <label>Adress</label>
+      <InputText @bind-Value="this.Input.Profile.Address" class="form-control" />
+      <ValidationMessage For="@(() => this.Input.Profile.Address)" />
+    </div>
+
+    <!-- VenueType -->
+    <div class="form-group">
+      <label>VenueType</label>
+      <InputText @bind-Value="this.Input.Profile.VenueType" class="form-control" />
+      <ValidationMessage For="@(() => this.Input.Profile.VenueType)" />
+    </div>
+
+    <!-- ContactInfo -->
+    <div class="form-group">
+      <label>ContactInfo</label>
+      <InputText @bind-Value="this.Input.Profile.ContactInfo" class="form-control" />
+      <ValidationMessage For="@(() => this.Input.Profile.ContactInfo)" />
+    </div>
+
+    <!-- Capacity -->
+    <div class="form-group">
+      <label>Capacity</label>
+      <InputNumber @bind-Value="this.Input.Profile.Capacity" class="form-control" />
+      <ValidationMessage For="@(() => this.Input.Profile.Capacity)" />
+    </div>
+
+    <!-- Bio -->
+    <div class="form-group">
+      <label>Bio</label>
+      <InputText @bind-Value="this.Input.Profile.Name" class="form-control" />
+      <ValidationMessage For="@(() => this.Input.Profile.Bio)" />
+    </div>
+
+    <!-- Description -->
+    <div class="form-group">
+      <label>Description</label>
+      <InputText @bind-Value="this.Input.Profile.Name" class="form-control" />
+      <ValidationMessage For="@(() => this.Input.Profile.Description)" />
+    </div>
+
+    <!-- Amenities -->
+    <div class="form-group">
+      <label>Amenities</label>
+      <InputText @bind-Value="this.Input.Profile.Name" class="form-control" />
+      <ValidationMessage For="@(() => this.Input.Profile.Amenities)" />
+    </div>
+
+    <!-- OpeningHours -->
+    <div class="form-group">
+      <label>OpenHours</label>
+      <InputText @bind-Value="this.Input.Profile.Name" class="form-control" />
+      <ValidationMessage For="@(() => this.Input.Profile.OpeningHours)" />
+    </div>
+
+    <!-- Genres -->
+    <div class="form-group">
+      <label>Genres</label>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>
+              <button type="button" @onclick="AddGenre" class="btn btn-sm btn-success">Add Genre</button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (int i = 0; i < this.Input.Genres.Count; i++)
+          {
+            var index = i;
+            <tr>
+              <td>
+                <InputText @bind-Value="this.Input.Genres[index]" class="form-control" />
+              </td>
+              <td>
+                <!-- This will delete the current row, as it refers to the specific index 'i' in this.Input iteration -->
+                <button type="button" @onclick="() => RemoveGenre(index)" class="btn btn-sm btn-danger">Delete</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </EditForm>
+}
+@code {
+
+  public SceneProfile? SceneProfile { get; set; }
+
+  private InputModel Input { get; set; } = new InputModel();
+  private EditForm? editForm;
+
+  private bool? IsAuthorized { get; set; }
+  private ApplicationUser? User { get; set; }
+
+  protected override async Task OnInitializedAsync()
+  {
+    var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    var user = authState.User;
+    if (!user.Identity!.IsAuthenticated)
+    {
+      IsAuthorized = false;
+      AddError("You must be logged in to create a profile. Please log in.", "/Account/Login");
+      return;
+    }
+    IsAuthorized = true;
+    User = await UserManager.GetUserAsync(user);
+  }
+
+  public async Task<SceneProfile?> SubmitForm()
+ 	{
+    if (editForm != null && editForm.EditContext != null)
+    {
+      if (editForm.EditContext.Validate())
+      {
+        await editForm.OnValidSubmit.InvokeAsync(editForm.EditContext);
+        return SceneProfile;
+      }
+      AddError("Failed to submit form as scene profile form was invalid.");
+    }
+    return null;
+	}
+
+  private async Task SubmitProfile()
+	{
+    if (SceneProfile != null)
+    {
+      AddError("Scene profile already exists");
+      return;
+    }
+    else
+    {
+      try
+      {
+        SceneProfile = await SceneService.CreateAsync(User.Id, this.GetSceneDto(), this.GetGenres());
+        AddSuccess("Scene profile created successfully", $"/Profile/Scene/{SceneProfile.Id}");
+      }
+      catch (Exception e)
+      {
+        AddError("Failed to create scene profile");
+      }
+    }
+	}
+
+  private void AddError(string message, string? link = null)
+  {
+
+    var entry = StatusCollection.AddEntry<CreateSceneProfile>(StatusType.Danger, message, link);
+    Logger.LogError(entry.ToString());
+  }
+
+  private void AddSuccess(string message, string link = null)
+  {
+    var entry = StatusCollection.AddEntry<CreateSceneProfile>(StatusType.Success, message, link);
+    Logger.LogDebug(entry.ToString());
+  }
+
+  private void AddGenre()
+  {
+    this.Input.Genres.Add("");
+  }
+  private void RemoveGenre(int index)
+  {
+    this.Input.Genres.RemoveAt(index);
+  }
+  private List<string> GetGenres()
+	{
+		return this.Input.Genres;
+	}
+  private CreateSceneDto GetSceneDto()
+  {
+    return new CreateSceneDto
+    (
+      Input.Profile.Name,
+      Input.Profile.Address,
+      Input.Profile.VenueType,
+      Input.Profile.ContactInfo,
+      Input.Profile.Capacity,
+      Input.Profile.Bio,
+      Input.Profile.Description,
+      Input.Profile.Amenities,
+      Input.Profile.OpeningHours
+    );
+  }
+
+  private class InputModel {
+		public SceneProfileViewModel Profile { get; set; } = new SceneProfileViewModel();
+    public List<string> Genres { get; set; } = new List<string>();
+  }
+
+	private class SceneProfileViewModel
+	{
+    [Required]
+    [MinLength(3, ErrorMessage = "Scene name must be at least 3 characters long")]
+    [MaxLength(30, ErrorMessage = "Scene name can't be longer than 30 characters")]
+    public string Name { get; set; } = string.Empty;
+
+    [Required]
+    public string Address { get; set; } = String.Empty;
+
+    [Required]
+    public string VenueType { get; set; } = String.Empty;
+
+    [Required]
+    public string ContactInfo { get; set; } = String.Empty;
+
+    [Required]
+    [Range(1, 1000000, ErrorMessage = "Capacity must be between 1 and 1000000")]
+    public int Capacity { get; set; } = 0;
+
+    [Required]
+    public string Bio { get; set; } = String.Empty;
+
+    [Required]
+    public string Description { get; set; } = String.Empty;
+
+    [Required]
+    public string Amenities { get; set; } = String.Empty;
+
+    [Required]
+    public string OpeningHours { get; set; } = String.Empty;
+	}
+}

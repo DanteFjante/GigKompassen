@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace GigKompassen.Blazor.Migrations
 {
     /// <inheritdoc />
-    public partial class mssqllocal_migration_495 : Migration
+    public partial class mssqllocal_migration_975 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -32,7 +32,7 @@ namespace GigKompassen.Blazor.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     FirstName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     LastName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ProfileCompleted = table.Column<bool>(type: "bit", nullable: false),
+                    RegistrationCompleted = table.Column<bool>(type: "bit", nullable: false),
                     Created = table.Column<DateTime>(type: "datetime2", nullable: false),
                     LastLogin = table.Column<DateTime>(type: "datetime2", nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -201,7 +201,8 @@ namespace GigKompassen.Blazor.Migrations
                         name: "FK_MediaLinks_AspNetUsers_UploaderId",
                         column: x => x.UploaderId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -220,7 +221,8 @@ namespace GigKompassen.Blazor.Migrations
                         name: "FK_Chats_MediaGalleryOwners_MediaGalleryOwnerId",
                         column: x => x.MediaGalleryOwnerId,
                         principalTable: "MediaGalleryOwners",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -238,7 +240,8 @@ namespace GigKompassen.Blazor.Migrations
                         name: "FK_MediaGalleries_MediaGalleryOwners_OwnerId",
                         column: x => x.OwnerId,
                         principalTable: "MediaGalleryOwners",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -273,12 +276,14 @@ namespace GigKompassen.Blazor.Migrations
                         name: "FK_Profiles_AspNetUsers_OwnerId",
                         column: x => x.OwnerId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Profiles_MediaGalleryOwners_MediaGalleryOwnerId",
                         column: x => x.MediaGalleryOwnerId,
                         principalTable: "MediaGalleryOwners",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -319,12 +324,14 @@ namespace GigKompassen.Blazor.Migrations
                         name: "FK_ChatParticipants_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_ChatParticipants_Chats_ChatId",
                         column: x => x.ChatId,
                         principalTable: "Chats",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -344,7 +351,8 @@ namespace GigKompassen.Blazor.Migrations
                         name: "FK_MediaItems_MediaGalleries_GalleryId",
                         column: x => x.GalleryId,
                         principalTable: "MediaGalleries",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_MediaItems_MediaLinks_MediaLinkId",
                         column: x => x.MediaLinkId,
@@ -369,7 +377,8 @@ namespace GigKompassen.Blazor.Migrations
                         name: "FK_ArtistMembers_Profiles_ArtistProfileId",
                         column: x => x.ArtistProfileId,
                         principalTable: "Profiles",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -436,7 +445,8 @@ namespace GigKompassen.Blazor.Migrations
                         name: "FK_ProfileAccesses_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_ProfileAccesses_Profiles_ProfileId",
                         column: x => x.ProfileId,
@@ -467,8 +477,7 @@ namespace GigKompassen.Blazor.Migrations
                         name: "FK_ChatMessages_ChatParticipants_SenderId",
                         column: x => x.SenderId,
                         principalTable: "ChatParticipants",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ChatMessages_Chats_ChatId",
                         column: x => x.ChatId,

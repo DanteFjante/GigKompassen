@@ -1,0 +1,63 @@
+﻿@using GigKompassen.Models.Profiles
+@using GigKompassen.Services
+@using Microsoft.EntityFrameworkCore
+
+@rendermode InteractiveServer
+
+@inject ProfileService profileService
+@inject NavigationManager NavigationManager
+
+<h3>Profiles</h3>
+
+<table class="table table-hover">
+  <thead>
+    <tr>
+      <th>Name</th>
+    </tr>
+  </thead>
+  <tbody>
+    @foreach (var profile in profiles)
+    {
+      <tr onclick="@(() => NavigateToProfile(profile.Id))" style="cursor: pointer;">
+        <td>@profile.Name</td>
+      </tr>
+    }
+  </tbody>
+</table>
+
+@code {
+  [Parameter]
+  public int? SkipProfiles { get; set; }
+
+  [Parameter]
+  public int? TakeProfiles { get; set; }
+
+  [SupplyParameterFromQuery]
+  public Guid? UserId { get; set; } = null;
+
+  private List<BaseProfile> profiles = new List<BaseProfile>();
+
+  protected override async Task OnInitializedAsync()
+  {
+    if (UserId.HasValue)
+    {
+      profiles = await profileService.GetProfilesOwnedByUserAsync(UserId.Value);
+    }
+    else
+    {
+      profiles = await profileService.GetAllAsync(SkipProfiles, TakeProfiles);
+    }
+  }
+
+  private void NavigateToProfile(Guid profileId)
+  {
+    NavigationManager.NavigateTo($"/Profile/{profileId}");
+  }
+
+  public string GetGenres(ArtistProfile artist)
+  {
+    if (artist == null || artist.Genres == null)
+      return "Error fetching genres";
+    return artist.Genres.Any() ? string.Join(", ", artist.Genres.Select(g => g.Name)) : "N/A";
+  }
+}

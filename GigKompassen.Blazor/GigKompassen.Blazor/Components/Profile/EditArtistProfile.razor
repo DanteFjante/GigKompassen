@@ -1,0 +1,244 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using GigKompassen.Blazor.Models.Status
+@using GigKompassen.Enums
+@using GigKompassen.Models.Profiles
+@using GigKompassen.Services
+
+@inject ArtistService ArtistService
+@inject NavigationManager NavigationManager
+@inject StatusCollection StatusCollection
+
+
+@if (IsLoading)
+{
+  <p>Loading artist information...</p>
+}
+else if (Input != null)
+{
+  <h3>Edit @Input?.Profile.Name</h3>
+  <EditForm Model="Input" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <!-- Profile Fields -->
+    <div class="mb-3">
+      <label for="name" class="form-label">Name</label>
+      <InputText id="name" class="form-control" @bind-Value="Input.Profile.Name" />
+    </div>
+
+    <div class="mb-3">
+      <label for="location" class="form-label">Location</label>
+      <InputText id="location" class="form-control" @bind-Value="Input.Profile.Location" />
+    </div>
+
+    <div class="mb-3">
+      <label for="availability" class="form-label">Availability</label>
+      <InputSelect id="availability" class="form-select" @bind-Value="Input.Profile.Availability">
+        @foreach (var status in Enum.GetValues<AvailabilityStatus>())
+        {
+          <option value="@status">@status</option>
+        }
+      </InputSelect>
+    </div>
+
+    <div class="mb-3">
+      <label for="bio" class="form-label">Bio</label>
+      <InputTextArea id="bio" class="form-control" @bind-Value="Input.Profile.Bio" />
+    </div>
+
+    <div class="mb-3">
+      <label for="description" class="form-label">Description</label>
+      <InputTextArea id="description" class="form-control" @bind-Value="Input.Profile.Description" />
+    </div>
+
+    <!-- Genres -->
+    <h4>Genres</h4>
+    @for (int i = 0; i < Input.Genres.Count; i++)
+    {
+      var index = i;
+      <div class="input-group mb-2">
+        <InputText class="form-control" @bind-Value="Input.Genres[index]" placeholder="Genre" />
+        <button type="button" class="btn btn-danger" @onclick="() => RemoveGenre(index)">Remove</button>
+      </div>
+    }
+    <button type="button" class="btn btn-primary mb-3" @onclick="AddGenre">Add Genre</button>
+
+    <!-- Members -->
+    <h4>Members</h4>
+    @for (int i = 0; i < Input.Members.Count; i++)
+    {
+      var index = i;
+      <div class="row mb-2">
+        <div class="col">
+          <InputText class="form-control" placeholder="Name" @bind-Value="Input.Members[index].Name" />
+        </div>
+        <div class="col">
+          <InputText class="form-control" placeholder="Role" @bind-Value="Input.Members[index].Role" />
+        </div>
+        <div class="col-auto">
+          <button type="button" class="btn btn-danger" @onclick="() => RemoveMember(index)">Remove</button>
+        </div>
+      </div>
+    }
+    <button type="button" class="btn btn-primary mb-3" @onclick="AddMember">Add Member</button>
+
+    <!-- Submit Button -->
+    <button type="submit" class="btn btn-success">Save Changes</button>
+  </EditForm>
+}
+else
+{
+  <p>Error loading artist information.</p>
+}
+
+@code {
+  [Parameter]
+  public Guid Id { get; set; }
+
+  private InputModel? Input;
+  private bool IsLoading = true;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await LoadArtistAsync();
+  }
+
+  private async Task LoadArtistAsync()
+  {
+    IsLoading = true;
+    try
+    {
+      var artist = await ArtistService.GetAsync(Id);
+      if (artist != null)
+      {
+        Input = new InputModel
+          {
+            Profile = new ArtistProfileViewModel
+            {
+              Name = artist.Name,
+              Location = artist.Location,
+              Availability = artist.Availability,
+              Bio = artist.Bio,
+              Description = artist.Description
+            },
+            Genres = artist.Genres?.Select(g => g.Name).ToList() ?? new List<string>(),
+            Members = artist.Members?.Select(m => new ArtistMemberViewModel
+            {
+              Id = m.Id,
+              Name = m.Name,
+              Role = m.Role
+            }).ToList() ?? new List<ArtistMemberViewModel>()
+          };
+      }
+    }
+    finally
+    {
+      IsLoading = false;
+    }
+  }
+
+  private async Task HandleValidSubmit()
+  {
+    var updateArtistDto = GetArtistDto();
+    var genres = GetGenres();
+    var members = GetMemberDtos();
+
+    // Update the artist profile using the service
+    var result = await ArtistService.UpdateAsync(Id, updateArtistDto, genres, members);
+    if (result != null)
+    {
+      // Navigate back to the artist profile page
+      NavigationManager.NavigateTo($"/Profile/{Id}");
+    }
+    else
+    {
+      // Handle update failure (e.g., show an error message)
+    }
+  }
+
+  private void AddGenre()
+  {
+    Input.Genres.Add(string.Empty);
+  }
+
+  private void RemoveGenre(int index)
+  {
+    Input.Genres.RemoveAt(index);
+  }
+
+  private void AddMember()
+  {
+    Input.Members.Add(new ArtistMemberViewModel());
+  }
+
+  private void RemoveMember(int index)
+  {
+    Input.Members.RemoveAt(index);
+  }
+
+  private List<ArtistMemberDto> GetMemberDtos()
+  {
+    return Input.Members
+        .Where(m => !string.IsNullOrWhiteSpace(m.Name) && !string.IsNullOrWhiteSpace(m.Role))
+        .Select(m => new ArtistMemberDto(m.Id ?? Guid.NewGuid(), m.Name, m.Role))
+        .ToList();
+  }
+
+  private List<string> GetGenres()
+  {
+    return Input.Genres.Where(g => !string.IsNullOrWhiteSpace(g)).ToList();
+  }
+
+  private UpdateArtistDto GetArtistDto()
+  {
+    return new UpdateArtistDto
+    (
+      Input.Profile.Name, 
+      Input.Profile.Location,
+      Input.Profile.Bio,
+      Input.Profile.Description,
+      Input.Profile.Availability
+    );
+  }
+
+  // Input models for data binding and validation
+  private class InputModel
+  {
+    public ArtistProfileViewModel Profile { get; set; } = new();
+    public List<string> Genres { get; set; } = new();
+    public List<ArtistMemberViewModel> Members { get; set; } = new();
+  }
+
+  private class ArtistProfileViewModel
+  {
+    [Required(ErrorMessage = "Name is required")]
+    [MinLength(3, ErrorMessage = "Name must be at least 3 characters")]
+    [MaxLength(30, ErrorMessage = "Name cannot exceed 30 characters")]
+    public string Name { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Location is required")]
+    public string Location { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Availability is required")]
+    public AvailabilityStatus Availability { get; set; } = AvailabilityStatus.Open;
+
+    [Required(ErrorMessage = "Bio is required")]
+    public string Bio { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Description is required")]
+    public string Description { get; set; } = string.Empty;
+  }
+
+  private class ArtistMemberViewModel
+  {
+    public Guid? Id { get; set; }
+
+    [Required(ErrorMessage = "Member name is required")]
+    [MinLength(3, ErrorMessage = "Member name must be at least 3 characters")]
+    [MaxLength(30, ErrorMessage = "Member name cannot exceed 30 characters")]
+    public string Name { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Role is required")]
+    public string Role { get; set; } = string.Empty;
+  }
+}
