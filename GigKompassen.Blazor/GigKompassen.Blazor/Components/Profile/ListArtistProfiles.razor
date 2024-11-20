@@ -47,11 +47,11 @@
   {
     if(UserId.HasValue)
     {
-      artists = await artistService.GetArtistProfilesOwnedByUserAsync(UserId.Value);
+      artists = await artistService.GetProfilesOwnedByUserAsync(UserId.Value, new(includeGenres: true));
     }
     else
     {
-      artists = await artistService.GetAllAsync(SkipArtists, TakeArtists);
+      artists = await artistService.GetAllAsync(SkipArtists, TakeArtists, new(includeGenres: true));
     }
   }
 
