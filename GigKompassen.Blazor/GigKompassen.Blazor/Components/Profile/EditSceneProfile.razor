@@ -105,7 +105,7 @@ else
     IsLoading = true;
     try
     {
-      var scene = await SceneService.GetAsync(Id);
+      var scene = await SceneService.GetAsync(Id, new(includeGenres: true));
       if (scene != null)
       {
         Input = new InputModel

@@ -108,7 +108,7 @@ else
     IsLoading = true;
     try
     {
-      var artist = await ArtistService.GetAsync(Id);
+      var artist = await ArtistService.GetAsync(Id, new(includeGenres: true));
       if (artist != null)
       {
         Input = new InputModel

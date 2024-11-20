@@ -48,6 +48,6 @@ else
 
   private async Task LoadSceneAsync()
   {
-    Scene = await sceneService.GetAsync(Id);
+    Scene = await sceneService.GetAsync(Id, new(includeGenres: true));
   }
 }
