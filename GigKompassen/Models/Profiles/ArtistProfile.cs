@@ -11,8 +11,8 @@ namespace GigKompassen.Models.Profiles
     public AvailabilityStatus Availability { get; set; } = AvailabilityStatus.Open;
 
     // Navigation properties
-    public List<ArtistMember>? Members { get; set; } = new List<ArtistMember>();
-    public List<Genre>? Genres { get; set; } = new List<Genre>();
+    public List<ArtistMember> Members { get; set; } = new List<ArtistMember>();
+    public List<Genre> Genres { get; set; } = new List<Genre>();
 
     public override ProfileTypes ProfileType => ProfileTypes.Artist;
   }
