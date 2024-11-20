@@ -14,7 +14,7 @@ namespace GigKompassen.Models.Profiles
     public string OpeningHours { get; set; } = String.Empty;
 
     // Navigation properties
-    public List<Genre>? Genres { get; set; } = new List<Genre>();
+    public List<Genre> Genres { get; set; } = new List<Genre>();
 
     public override ProfileTypes ProfileType => ProfileTypes.Scene;
   }

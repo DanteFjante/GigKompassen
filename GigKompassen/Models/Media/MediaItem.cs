@@ -14,7 +14,7 @@ namespace GigKompassen.Models.Media
     public Guid? MediaLinkId { get; set; }
 
     // Navigation properties
-    public MediaGallery Gallery { get; set; }
+    public MediaGallery? Gallery { get; set; }
     public MediaLink? MediaLink { get; set; }
   }
 }
