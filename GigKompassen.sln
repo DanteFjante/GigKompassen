@@ -5,8 +5,6 @@ VisualStudioVersion = 17.12.35209.166
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GigKompassen", "GigKompassen\GigKompassen.csproj", "{AD3C2F15-17D0-4227-A567-7B583134F66F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GigKompassen.Web", "GigKompassen.Web\GigKompassen.Web.csproj", "{E2E65E53-FE71-40B6-B95C-48E81047FB65}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GigKompassen.Test", "GigKompassen.Test\GigKompassen.Test.csproj", "{914C7DA6-B36E-4D66-81A7-49840915F573}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GigKompassen.Blazor", "GigKompassen.Blazor\GigKompassen.Blazor\GigKompassen.Blazor.csproj", "{F48478BE-6925-4DD3-8D29-8BEE1E5DAFF9}"
@@ -25,10 +23,6 @@ Global
 		{AD3C2F15-17D0-4227-A567-7B583134F66F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AD3C2F15-17D0-4227-A567-7B583134F66F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AD3C2F15-17D0-4227-A567-7B583134F66F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E2E65E53-FE71-40B6-B95C-48E81047FB65}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E2E65E53-FE71-40B6-B95C-48E81047FB65}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E2E65E53-FE71-40B6-B95C-48E81047FB65}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E2E65E53-FE71-40B6-B95C-48E81047FB65}.Release|Any CPU.Build.0 = Release|Any CPU
 		{914C7DA6-B36E-4D66-81A7-49840915F573}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{914C7DA6-B36E-4D66-81A7-49840915F573}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{914C7DA6-B36E-4D66-81A7-49840915F573}.Release|Any CPU.ActiveCfg = Release|Any CPU

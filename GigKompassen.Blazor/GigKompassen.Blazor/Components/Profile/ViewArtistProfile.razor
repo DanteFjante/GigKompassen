@@ -62,6 +62,6 @@ else
 
   private async Task LoadArtistAsync()
   {
-    Artist = await ArtistService.GetAsync(Id);
+    Artist = await ArtistService.GetAsync(Id, new(includeGenres: true));
   }
 }
