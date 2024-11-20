@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using GigKompassen.Misc;
 using GigKompassen.Blazor.Components.Account.Shared;
 using GigKompassen.Blazor.Models.Status;
+using Microsoft.Extensions.Logging;
 
 namespace GigKompassen.Blazor
 {
@@ -32,6 +33,13 @@ namespace GigKompassen.Blazor
 
       builder.Services.AddSingleton<StatusCollection>();
 
+      builder.Logging.ClearProviders();
+      builder.Logging.AddConsole();
+      builder.Logging.AddDebug();
+
+      // Add file logging with Serilog or other providers if needed
+      builder.Logging.AddAzureWebAppDiagnostics();
+
       builder.Services.AddAuthentication(options =>
           {
             options.DefaultScheme = IdentityConstants.ApplicationScheme;
@@ -41,7 +49,9 @@ namespace GigKompassen.Blazor
 
       var assemblyname = typeof(Program).Assembly.GetName().Name;
 
-      var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+      var connectionString = builder.Configuration.GetConnectionString("DatabaseConnection") 
+        ?? builder.Configuration.GetConnectionString("DefaultConnection") 
+        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
       builder.Services.AddDbContext<ApplicationDbContext>(options =>
           options.UseSqlServer(
             connectionString,
