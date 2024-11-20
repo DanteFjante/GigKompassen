@@ -5,34 +5,13 @@ using GigKompassen.Models.Profiles;
 
 using Microsoft.EntityFrameworkCore;
 
-using System.Runtime.InteropServices;
-
-using static GigKompassen.Misc.AsyncEventsHelper;
-
 namespace GigKompassen.Services
 {
   public class ArtistService
   {
-
-    public delegate void GenreEventHandler(object? sender, ArtistProfile artistProfile, Genre genre);
-    public delegate void GenresEventHandler(object? sender, ArtistProfile artistProfile, List<Genre> genres);
-
     private readonly ApplicationDbContext _context;
     private readonly GenreService _genreService;
     private readonly MediaService _mediaService;
-
-    // Events
-    public event AsyncEventHandler<ArtistProfile> OnCreateArtistProfile;
-    public event AsyncEventHandler<ArtistProfile> OnUpdateArtistProfile;
-    public event AsyncEventHandler<ArtistProfile> OnDeleteArtistProfile;
-    public event AsyncEventHandler<ArtistMember> OnAddArtistMember;
-    public event AsyncEventHandler<ArtistMember> OnUpdateArtistMember;
-    public event AsyncEventHandler<ArtistMember> OnRemoveArtistMember;
-    public event AsyncEventHandler<GenreEventArgs> OnAddGenre;
-    public event AsyncEventHandler<GenresEventArgs> OnAddGenres;
-    public event AsyncEventHandler<GenreEventArgs> OnRemoveGenre;
-    public event AsyncEventHandler<GenresEventArgs> OnRemoveGenres;
-
 
     public ArtistService(ApplicationDbContext context, GenreService genreService, MediaService mediaService)
     {
@@ -42,7 +21,7 @@ namespace GigKompassen.Services
     }
 
     #region Getters
-    public async Task<List<ArtistProfile>> GetAllAsync(int? skip = null, int? take = null)
+    public async Task<List<ArtistProfile>> GetAllAsync(int? skip = null, int? take = null, ArtistProfileQueryOptions? queryOptions = null)
     {
       var query = _context.ArtistProfiles.Include(ap => ap.Genres).Include(ap => ap.Members).AsQueryable();
 
@@ -52,57 +31,66 @@ namespace GigKompassen.Services
       if (take.HasValue)
         query = query.Take(take.Value).AsQueryable();
 
+      if(queryOptions != null)
+        query = queryOptions.Apply(query);
+
       var artistProfiles = await query.ToListAsync();
 
       return artistProfiles;
     }
 
-
-    public async Task<ArtistProfile?> GetAsync(Guid id)
+    public async Task<ArtistProfile?> GetAsync(Guid id, ArtistProfileQueryOptions? queryOptions = null)
     {
-      var artistProfile = await _context.ArtistProfiles
-        .Include(ap => ap.Members)
-        .Include(ap => ap.Genres)
-        .FirstOrDefaultAsync(ap => ap.Id == id);
+      var query = _context.ArtistProfiles.AsQueryable();
 
-      if (artistProfile == null)
-        return null;
+      if (queryOptions != null)
+        query = queryOptions.Apply(query);
 
-      return artistProfile;
+      return await query.FirstOrDefaultAsync(ap => ap.Id == id);
     }
 
-    public async Task<List<ArtistProfile>> GetArtistProfilesUsingGenre(string genreName)
+    public async Task<List<ArtistProfile>> GetArtistProfilesUsingGenre(string genreName, ArtistProfileQueryOptions? queryOptions = null)
     {
       var genre = await _genreService.GetGenreAsync(genreName);
       if (genre == null)
         throw new KeyNotFoundException("Genre not found");
 
-      return await GetArtistProfilesUsingGenre(genre);
+      return await GetArtistProfilesUsingGenre(genre, queryOptions);
     }
 
-    public async Task<List<ArtistProfile>> GetArtistProfilesUsingGenre(Guid genreId)
+    public async Task<List<ArtistProfile>> GetArtistProfilesUsingGenre(Guid genreId, ArtistProfileQueryOptions? queryOptions = null)
     {
       var genre = await _genreService.GetGenreAsync(genreId);
       if (genre == null)
         throw new KeyNotFoundException("Genre not found");
 
-      return await GetArtistProfilesUsingGenre(genre);
+      return await GetArtistProfilesUsingGenre(genre, queryOptions);
     }
 
-    public async Task<List<ArtistProfile>> GetArtistProfilesUsingGenre(Genre genre)
+    public async Task<List<ArtistProfile>> GetArtistProfilesUsingGenre(Genre genre, ArtistProfileQueryOptions? queryOptions = null)
     {
-      return await _context.ArtistProfiles
-                .Include(ap => ap.Genres)
-                .Where(ap => ap.Genres.Contains(genre))
-                .ToListAsync();
+      var query = _context.ArtistProfiles
+          .Include(ap => ap.Genres)
+          .Where(ap => ap.Genres.Contains(genre))
+          .AsQueryable();
+
+      if (queryOptions != null)
+        query = queryOptions.Apply(query);
+
+      return await query.ToListAsync();
     }
 
-    public async Task<List<ArtistProfile>> GetArtistProfilesOwnedByUserAsync(Guid userId)
+    public async Task<List<ArtistProfile>> GetProfilesOwnedByUserAsync(Guid userId, ArtistProfileQueryOptions? queryOptions = null)
     {
       if (!await _context.Users.AnyAsync(p => p.Id == userId))
         throw new KeyNotFoundException("User not found");
 
-      return await _context.ArtistProfiles.Include(ap => ap.Genres).Include(ap => ap.Members).Where(p => p.OwnerId == userId).ToListAsync();
+      var query = _context.ArtistProfiles.Include(ap => ap.Genres).Include(ap => ap.Members).Where(p => p.OwnerId == userId).AsQueryable();
+
+      if (queryOptions != null)
+        query = queryOptions.Apply(query);
+
+      return await query.ToListAsync();
     }
     #endregion
 
@@ -139,9 +127,6 @@ namespace GigKompassen.Services
 
       profile.MediaGalleryOwnerId = mediaGalleryOwner.Id;
       profile.MediaGalleryOwner = mediaGalleryOwner;
-
-      if(OnCreateArtistProfile != null)
-        await OnCreateArtistProfile.InvokeAsync(this, profile);
 
       await _context.ArtistProfiles.AddAsync(profile);
       if(await _context.SaveChangesAsync() == 0)
@@ -233,9 +218,6 @@ namespace GigKompassen.Services
         }
       }
 
-      if (OnUpdateArtistProfile != null)
-        await OnUpdateArtistProfile.InvokeAsync(this, profile);
-
       _context.ArtistProfiles.Update(profile);
       var res = await _context.SaveChangesAsync();
       if(res == 0)
@@ -254,17 +236,11 @@ namespace GigKompassen.Services
       if (artistProfile == null)
         return false;
 
-
-
       if(artistProfile.Members != null && artistProfile.Members.Any())
         _context.ArtistMembers.RemoveRange(artistProfile.Members);
 
       if(artistProfile.Genres != null && artistProfile.Genres.Any())
         await RemoveGenresAsync(artistProfile.Id, artistProfile.Genres.Select(g => g.Name).ToList());
-
-      if (OnDeleteArtistProfile != null)
-        await OnDeleteArtistProfile.InvokeAsync(this, artistProfile);
-
 
       _context.ArtistProfiles.Remove(artistProfile);
 
@@ -294,9 +270,6 @@ namespace GigKompassen.Services
 
       ArtistMember newMember = dto.ToArtistMember(artistProfile);
 
-      if(OnAddArtistMember != null)
-        await OnAddArtistMember.InvokeAsync(this, newMember);
-
       await _context.ArtistMembers.AddAsync(newMember);
 
       if(await _context.SaveChangesAsync() == 0)
@@ -318,9 +291,6 @@ namespace GigKompassen.Services
         return false;
 
       dto.UpdateArtistMember(existingMember);
-
-      if(OnUpdateArtistMember != null)
-        await OnUpdateArtistMember.InvokeAsync(this, existingMember);
       
       if(await _context.SaveChangesAsync() == 0)
         throw new DbUpdateException("Failed to update ArtistMember");
@@ -333,9 +303,6 @@ namespace GigKompassen.Services
       var member = await _context.ArtistMembers.FirstOrDefaultAsync(m => m.Id == memberId);
       if (member == null)
         return false;
-
-      if(OnRemoveArtistMember != null)
-        await OnRemoveArtistMember.InvokeAsync(this, member);
       
       _context.ArtistMembers.Remove(member);
       if(await _context.SaveChangesAsync() == 0)
@@ -343,8 +310,6 @@ namespace GigKompassen.Services
 
       return true;
     }
-
-
     #endregion
 
     #region Genres
@@ -358,9 +323,6 @@ namespace GigKompassen.Services
         throw new KeyNotFoundException("ArtistProfile not found");
 
       var genre = await _genreService.GetOrCreateGenreAsync(genreName);
-
-      if(OnAddGenre != null)
-        await OnAddGenre.InvokeAsync(this, new(artistProfile, genre));
 
       artistProfile.Genres!.Add(genre);
       if(await _context.SaveChangesAsync() == 0)
@@ -379,9 +341,6 @@ namespace GigKompassen.Services
         throw new KeyNotFoundException("ArtistProfile not found");
 
       var genres = await _genreService.GetOrCreateGenresAsync(genreNames);
-      
-      if(OnRemoveGenre != null)
-        await OnAddGenres.InvokeAsync(this, new(artistProfile, genres));
 
       artistProfile.Genres!.AddRange(genres);
       if(await _context.SaveChangesAsync() == 0)
@@ -406,8 +365,6 @@ namespace GigKompassen.Services
 
       if (artistProfile.Genres.Contains(genre))
       {
-        if(OnRemoveGenre != null)
-          await OnRemoveGenre.InvokeAsync(this, new(artistProfile, genre));
         
         artistProfile.Genres.Remove(genre);
         if(await _context.SaveChangesAsync() == 0)
@@ -440,9 +397,6 @@ namespace GigKompassen.Services
 
       var toRemove = artistProfile.Genres.Where(g => genreNames.Contains(g.Name)).ToList();
 
-      if(OnRemoveGenres != null)
-        await OnRemoveGenres.InvokeAsync(this, new (artistProfile, toRemove));
-
       foreach (var genre in toRemove)
       {
         artistProfile.Genres.Remove(genre);
@@ -463,8 +417,6 @@ namespace GigKompassen.Services
     }
     #endregion
 
-    public record class GenreEventArgs(ArtistProfile ArtistProfile, Genre Genre);
-    public record class GenresEventArgs(ArtistProfile ArtistProfile, List<Genre> Genres);
   }
   
   public record class ArtistMemberDto(Guid? Id = null, string? Name = null, string? Role = null)
@@ -503,6 +455,7 @@ namespace GigKompassen.Services
       return new ArtistMemberDto(artistMember.Id, artistMember.Name, artistMember.Role);
     }
   }
+
   public record class CreateArtistDto(string Name, string? Location, string? Bio, string? Description, AvailabilityStatus Availability, bool PublicProfile = true)
   {
     public ArtistProfile ToArtistProfile()
@@ -532,6 +485,7 @@ namespace GigKompassen.Services
       return new CreateArtistDto(artistProfile.Name, artistProfile.Location, artistProfile.Bio, artistProfile.Description, artistProfile.Availability, artistProfile.Public);
     }
   }
+
   public record class UpdateArtistDto(string? Name = null, string? Location = null, string? Bio = null, string? Description = null, AvailabilityStatus? Availability = null, bool? PublicProfile = null)
   {
     public void UpdateProfile(ArtistProfile profile)
@@ -557,6 +511,40 @@ namespace GigKompassen.Services
     public static UpdateArtistDto FromArtistProfile(ArtistProfile artistProfile)
     {
       return new UpdateArtistDto(artistProfile.Name, artistProfile.Location, artistProfile.Bio, artistProfile.Description, artistProfile.Availability, artistProfile.Public);
+    }
+  }
+
+  public class ArtistProfileQueryOptions : ProfileQueryOptions
+  {
+    public bool IncludeGenres { get; set; } = false;
+    public bool IncludeMembers { get; set; } = false;
+
+    public ArtistProfileQueryOptions(
+      bool includeOwner = false,
+      bool includeGallery = false,
+      bool includeGenres = false,
+      bool includeMembers = false)
+      : base(includeOwner, includeGallery, ProfileTypes.Artist)
+    {
+      IncludeGenres = false;
+      IncludeMembers = false;
+    }
+
+    public IQueryable<ArtistProfile> Apply(IQueryable<ArtistProfile> query)
+    {
+      if (IncludeOwner)
+        query = query.Include(sp => sp.Owner);
+
+      if (IncludeMediaGallery)
+        query = query.Include(sp => sp.MediaGalleryOwner);
+
+      if (IncludeGenres)
+        query = query.Include(ap => ap.Genres);
+
+      if (IncludeMembers)
+        query = query.Include(ap => ap.Members);
+
+      return query;
     }
   }
 }

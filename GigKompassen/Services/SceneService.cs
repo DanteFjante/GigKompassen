@@ -1,11 +1,9 @@
 ﻿using GigKompassen.Data;
+using GigKompassen.Enums;
 using GigKompassen.Models.Media;
 using GigKompassen.Models.Profiles;
 
 using Microsoft.EntityFrameworkCore;
-
-using static GigKompassen.Misc.AsyncEventsHelper;
-
 
 namespace GigKompassen.Services
 {
@@ -15,17 +13,6 @@ namespace GigKompassen.Services
     private readonly GenreService _genreService;
     private readonly MediaService _mediaService;
 
-    public delegate void GenreEventHandler(object? sender, SceneProfile sceneProfile, Genre genre);
-    public delegate void GenresEventHandler(object? sender, SceneProfile SceneProfile, List<Genre> genres);
-
-    public event AsyncEventHandler<SceneProfile> OnCreateSceneProfile;
-    public event AsyncEventHandler<SceneProfile> OnUpdateSceneProfile;
-    public event AsyncEventHandler<SceneProfile> OnDeleteSceneProfile;
-    public event AsyncEventHandler<GenreEventArgs> OnGenreAdded;
-    public event AsyncEventHandler<GenresEventArgs> OnGenresAdded;
-    public event AsyncEventHandler<GenreEventArgs> OnGenreRemoved;
-    public event AsyncEventHandler<GenresEventArgs> OnGenresRemoved;
-
     public SceneService(ApplicationDbContext context, GenreService genreService, MediaService mediaService)
     {
       _context = context;
@@ -34,28 +21,44 @@ namespace GigKompassen.Services
 
     }
     #region Getters
-    public async Task<ICollection<SceneProfile>> GetAllAsync()
+    public async Task<List<SceneProfile>> GetAllAsync(int? skip = null, int? take = null, SceneProfileQueryOptions? options = null)
     {
-      var sceneProfiles = await _context.SceneProfiles.Include(sp => sp.Genres).ToListAsync();
+      var query = _context.SceneProfiles.AsQueryable();
+
+      if (skip.HasValue)
+        query = query.Skip(skip.Value);
+
+      if (take.HasValue)
+        query = query.Take(take.Value);
+
+      if (options != null)
+        query = options.Apply(query);
+
+      return await query.ToListAsync();
+    }
+
+    public async Task<SceneProfile?> GetAsync(Guid id, SceneProfileQueryOptions? options = null)
+    {
+      var query = _context.SceneProfiles.AsQueryable();
+
+      if (options != null)
+        query = options.Apply(query);
+
+      var sceneProfiles = await query.FirstOrDefaultAsync(p => p.Id == id);
+
       return sceneProfiles;
     }
 
-    public async Task<SceneProfile?> GetAsync(Guid id)
-    {
-      var sceneProfiles = await _context.SceneProfiles.Include(sp => sp.Genres).FirstOrDefaultAsync(p => p.Id == id);
-      return sceneProfiles;
-    }
-
-    public async Task<List<SceneProfile>> GetSceneProfilesUsingGenre(string genreName)
+    public async Task<List<SceneProfile>> GetSceneProfilesUsingGenre(string genreName, SceneProfileQueryOptions? queryOptions = null)
     {
       var genre = await _genreService.GetGenreAsync(genreName);
       if (genre == null)
         throw new KeyNotFoundException("Genre not found");
 
-      return await GetSceneProfilesUsingGenre(genre);
+      return await GetSceneProfilesUsingGenre(genre, queryOptions);
     }
 
-    public async Task<List<SceneProfile>> GetSceneProfilesUsingGenre(Guid genreId)
+    public async Task<List<SceneProfile>> GetSceneProfilesUsingGenre(Guid genreId, SceneProfileQueryOptions? queryOptions = null)
     {
       var genre = await _genreService.GetGenreAsync(genreId);
       if (genre == null)
@@ -64,20 +67,30 @@ namespace GigKompassen.Services
       return await GetSceneProfilesUsingGenre(genre);
     }
 
-    public async Task<List<SceneProfile>> GetSceneProfilesUsingGenre(Genre genre)
+    public async Task<List<SceneProfile>> GetSceneProfilesUsingGenre(Genre genre, SceneProfileQueryOptions? queryOptions = null)
     {
-      return await _context.SceneProfiles
-                .Include(ap => ap.Genres)
-                .Where(ap => ap.Genres!.Contains(genre))
-                .ToListAsync();
+      var query = _context.SceneProfiles
+          .Include(ap => ap.Genres)
+          .Where(ap => ap.Genres!.Contains(genre));
+
+      if (queryOptions != null)
+        query = queryOptions.Apply(query);
+
+      return await query.ToListAsync();
     }
 
-    public async Task<List<SceneProfile>> GetSceneProfilesOwnerByUserAsync(Guid userId)
+    public async Task<List<SceneProfile>> GetSceneProfilesOwnerByUserAsync(Guid userId, SceneProfileQueryOptions? queryOptions = null)
     {
       if (!await _context.Users.AnyAsync(p => p.Id == userId))
         throw new KeyNotFoundException("User not found");
 
-      return await _context.SceneProfiles.Where(p => p.OwnerId == userId).ToListAsync();
+      var query = _context.SceneProfiles
+          .Where(p => p.OwnerId == userId);
+
+      if (queryOptions != null)
+        query = queryOptions.Apply(query);
+
+      return await query.ToListAsync();
     }
     #endregion
 
@@ -110,9 +123,6 @@ namespace GigKompassen.Services
         var genres = await _genreService.GetOrCreateGenresAsync(genreNames);
         profile.Genres!.AddRange(genres);
       }
-
-      if(OnCreateSceneProfile != null)
-        await OnCreateSceneProfile.InvokeAsync(this, profile);
 
       await _context.SceneProfiles.AddAsync(profile);
       if(await _context.SaveChangesAsync() == 0)
@@ -155,9 +165,6 @@ namespace GigKompassen.Services
         }
       }
 
-      if (OnUpdateSceneProfile != null)
-        await OnUpdateSceneProfile.InvokeAsync(this, profile);
-
       await _context.SaveChangesAsync();
       return profile;
     }
@@ -172,9 +179,6 @@ namespace GigKompassen.Services
 
       if (sceneProfile.Genres != null && sceneProfile.Genres.Any())
         await RemoveGenresAsync(sceneProfile.Id, sceneProfile.Genres.Select(g => g.Name).ToList());
-
-      if(OnDeleteSceneProfile != null)
-        await OnDeleteSceneProfile.InvokeAsync(this, sceneProfile);
       
       _context.SceneProfiles.Remove(sceneProfile);
       if(await _context.SaveChangesAsync() == 0)
@@ -201,9 +205,6 @@ namespace GigKompassen.Services
 
       var genre = await _genreService.GetOrCreateGenreAsync(genreName);
 
-      if(OnGenreAdded != null)
-        await OnGenreAdded.InvokeAsync(this, new(sceneProfile, genre));
-
       sceneProfile.Genres!.Add(genre);
       if (await _context.SaveChangesAsync() == 0)
         throw new DbUpdateException("Failed to add Genre");
@@ -221,9 +222,6 @@ namespace GigKompassen.Services
         throw new KeyNotFoundException("SceneProfile not found");
 
       var genres = await _genreService.GetOrCreateGenresAsync(genreNames);
-
-      if(OnGenresAdded != null)
-        await OnGenresAdded.InvokeAsync(this, new (sceneProfile, genres));
 
       sceneProfile.Genres!.AddRange(genres);
       if (await _context.SaveChangesAsync() == 0)
@@ -248,8 +246,6 @@ namespace GigKompassen.Services
 
       if (sceneProfile.Genres.Contains(genre))
       {
-        if(OnGenreRemoved != null)
-          await OnGenreRemoved.InvokeAsync(this, new(sceneProfile, genre));
 
         sceneProfile.Genres.Remove(genre);
         if (await _context.SaveChangesAsync() == 0)
@@ -281,9 +277,6 @@ namespace GigKompassen.Services
 
       var toRemove = sceneProfile.Genres.Where(g => genreNames.Contains(g.Name)).ToList();
 
-      if(OnGenresRemoved != null)
-        await OnGenresRemoved.InvokeAsync(this, new(sceneProfile, toRemove));
-
       foreach (var genre in toRemove)
       {
         sceneProfile.Genres.Remove(genre);
@@ -303,8 +296,6 @@ namespace GigKompassen.Services
       return result;
     }
     #endregion
-    public record class GenreEventArgs(SceneProfile SceneProfile, Genre Genre);
-    public record class GenresEventArgs(SceneProfile SceneProfile, List<Genre> Genres);
   }
 
   public record class CreateSceneDto(string Name, string? Address, string? VenueType, string? ContactInfo, int Capacity, string? Bio, string? Description, string? Amenities, string? OpeningHours, bool PublicProfile = true)
@@ -335,6 +326,7 @@ namespace GigKompassen.Services
       return new CreateSceneDto(scene.Name, scene.Address, scene.VenueType, scene.ContactInfo, scene.Capacity, scene.Bio, scene.Description, scene.Amenities, scene.OpeningHours, scene.Public);
     }
   }
+
   public record class UpdateSceneDto(string? Name = null, string? Address = null, string? VenueType = null, string? ContactInfo = null, int? Capacity = null, string? Bio = null, string? Description = null, string? Amenities = null, string? OpeningHours = null, bool? publicProfile = null)
   {
     public void UpdateScene(SceneProfile profile)
@@ -373,6 +365,31 @@ namespace GigKompassen.Services
     public static UpdateSceneDto FromSceneProfile(SceneProfile scene)
     {
       return new UpdateSceneDto(scene.Name, scene.Address, scene.VenueType, scene.ContactInfo, scene.Capacity, scene.Bio, scene.Description, scene.Amenities, scene.OpeningHours, scene.Public);
+    }
+  }
+
+  public class SceneProfileQueryOptions : ProfileQueryOptions
+  {
+    public bool IncludeGenres { get; set; } = false;
+
+    public SceneProfileQueryOptions(bool includeOwner = false, bool includeMediaGallery = false, bool includeGenres = false) : base(includeOwner, includeMediaGallery)
+    {
+      IncludeGenres = includeGenres;
+      ProfileType = ProfileTypes.Scene;
+    }
+
+    public IQueryable<SceneProfile> Apply(IQueryable<SceneProfile> query)
+    {
+      if (IncludeOwner)
+        query = query.Include(sp => sp.Owner);
+
+      if (IncludeMediaGallery)
+        query = query.Include(sp => sp.MediaGalleryOwner);
+
+      if(IncludeGenres)
+        query = query.Include(sp => sp.Genres);
+
+      return query;
     }
   }
 }
