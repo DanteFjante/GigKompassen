@@ -3,18 +3,11 @@ using GigKompassen.Models.Profiles;
 
 using Microsoft.EntityFrameworkCore;
 
-using static GigKompassen.Misc.AsyncEventsHelper;
-
 namespace GigKompassen.Services
 {
   public class GenreService
   {
     private readonly ApplicationDbContext _context;
-
-    public event AsyncEventHandler<Genre> OnGenreCreated;
-    public event AsyncEventHandler<List<Genre>> OnGenresCreated;
-    public event AsyncEventHandler<Genre> OnGenreRemoved;
-    public event AsyncEventHandler<List<Genre>> OnGenresRemoved;
 
     public GenreService(ApplicationDbContext context)
     {
@@ -68,9 +61,6 @@ namespace GigKompassen.Services
       if(await _context.SaveChangesAsync() == 0)
         throw new DbUpdateException("Failed to create genre");
 
-      if(OnGenreCreated != null)
-        await OnGenreCreated.InvokeAsync(this, genre);
-
       return genre;
     }
 
@@ -86,9 +76,6 @@ namespace GigKompassen.Services
         genres.Add(genre);
       }
       await _context.SaveChangesAsync();
-      
-      if (OnGenresCreated != null)
-        await OnGenresCreated.InvokeAsync(this, genres);
 
       return genres;
     }
@@ -122,9 +109,6 @@ namespace GigKompassen.Services
       _context.Genres.Remove(toRemove!);
       var result = await _context.SaveChangesAsync();
 
-      if (result == 1 && OnGenreRemoved != null)
-        await OnGenreRemoved.InvokeAsync(this, toRemove!);
-
       return result == 1;
     }
 
@@ -134,9 +118,6 @@ namespace GigKompassen.Services
 
       _context.Genres.RemoveRange(existingGenres);
       var result = await _context.SaveChangesAsync();
-
-      if (result > 0 && OnGenresRemoved != null)
-        await OnGenresRemoved.InvokeAsync(this, existingGenres);
 
       return result;
     }
@@ -150,9 +131,6 @@ namespace GigKompassen.Services
       _context.Genres.Remove(toRemove!);
       var result = await _context.SaveChangesAsync();
 
-      if (result == 1 && OnGenreRemoved != null)
-        await OnGenreRemoved.InvokeAsync(this, toRemove!);
-
       return result == 1;
     }
 
@@ -162,8 +140,6 @@ namespace GigKompassen.Services
       _context.Genres.RemoveRange(existingGenres);
 
       var result = await _context.SaveChangesAsync();
-      if (result > 0 && OnGenresRemoved != null)
-        await OnGenresRemoved.InvokeAsync(this, existingGenres);
 
       return result;
     }
@@ -173,9 +149,6 @@ namespace GigKompassen.Services
       _context.Genres.Remove(genre);
       var result = await _context.SaveChangesAsync();
 
-      if (result == 1 && OnGenreRemoved != null)
-        await OnGenreRemoved.InvokeAsync(this, genre);
-
       return result == 1;
     }
 
@@ -184,9 +157,6 @@ namespace GigKompassen.Services
       _context.Genres.RemoveRange(genres);
 
       var result = await _context.SaveChangesAsync();
-
-      if (result > 0 && OnGenresRemoved != null)
-        await OnGenresRemoved.InvokeAsync(this, genres.ToList());
 
       return result;
     }

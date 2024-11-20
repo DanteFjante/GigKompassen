@@ -4,18 +4,12 @@ using GigKompassen.Models.Profiles;
 
 using Microsoft.EntityFrameworkCore;
 
-using static GigKompassen.Misc.AsyncEventsHelper;
-
 namespace GigKompassen.Services
 {
   public class ManagerService
   {
     private readonly ApplicationDbContext _context;
     private readonly MediaService _mediaService;
-
-    public event AsyncEventHandler<ManagerProfile> OnCreateManagerProfile;
-    public event AsyncEventHandler<ManagerProfile> OnUpdateManagerProfile;
-    public event AsyncEventHandler<ManagerProfile> OnDeleteManagerProfile;
 
     public ManagerService(ApplicationDbContext context, MediaService mediaService) 
     {
@@ -25,24 +19,46 @@ namespace GigKompassen.Services
     }
 
     #region Getters
-    public async Task<ICollection<ManagerProfile>> GetAllAsync()
+    public async Task<List<ManagerProfile>> GetAllAsync(int? skip = null, int? take = null, ManagerProfileQueryOptions? queryOptions = null)
     {
-      var profiles = await _context.ManagerProfiles.ToListAsync();
+      var query = _context.ManagerProfiles.AsQueryable();
+
+      if(skip.HasValue)
+        query = query.Skip(skip.Value);
+
+      if (take.HasValue)
+        query = query.Take(take.Value);
+
+      if(queryOptions != null)
+        query = queryOptions.Apply(query);
+
+      var profiles = await query.ToListAsync();
       return profiles;
     }
 
-    public async Task<ManagerProfile?> GetAsync(Guid id)
+    public async Task<ManagerProfile?> GetAsync(Guid id, ManagerProfileQueryOptions? queryOptions = null)
     {
-      var profile = await _context.ManagerProfiles.FirstOrDefaultAsync(p => p.Id == id);
+      var query = _context.ManagerProfiles.Where(p => p.Id == id);
+
+      if(queryOptions != null)
+        query = queryOptions.Apply(query);
+
+      var profile = await query.FirstOrDefaultAsync(p => p.Id == id);
+
       return profile;
     }
 
-    public async Task<List<ManagerProfile>> GetManagerProfilesOwnerByUserAsync(Guid userId)
+    public async Task<List<ManagerProfile>> GetProfilesOwnerByUserAsync(Guid userId, ManagerProfileQueryOptions? queryOptions = null)
     {
       if (!await _context.Users.AnyAsync(p => p.Id == userId))
         throw new KeyNotFoundException("User not found");
 
-      return await _context.ManagerProfiles.Where(p => p.OwnerId == userId).ToListAsync();
+      var query = _context.ManagerProfiles.Where(p => p.OwnerId == userId);
+
+      if (queryOptions != null)
+        query = queryOptions.Apply(query);
+
+      return await query.ToListAsync();
     }
     #endregion
 
@@ -72,9 +88,6 @@ namespace GigKompassen.Services
       profile.MediaGalleryOwner = mediaGalleryOwner;
       profile.MediaGalleryOwnerId = mediaGalleryOwner.Id;
 
-      if(OnCreateManagerProfile != null)
-        await OnCreateManagerProfile.Invoke(this, profile);
-
       await _context.ManagerProfiles.AddAsync(profile);
       
       if(await _context.SaveChangesAsync() == 0)
@@ -94,9 +107,6 @@ namespace GigKompassen.Services
 
       dto.UpdateManager(profile);
 
-      if(OnUpdateManagerProfile != null)
-        await OnUpdateManagerProfile.Invoke(this, profile);
-
       if (await _context.SaveChangesAsync() == 0)
         throw new DbUpdateException("Failed to update ManagerProfile");
 
@@ -110,9 +120,6 @@ namespace GigKompassen.Services
       var profile = await _context.ManagerProfiles.FindAsync(id);
       if (profile == null)
         return false;
-
-      if(OnDeleteManagerProfile != null)
-        await OnDeleteManagerProfile.Invoke(this, profile);
 
       _context.ManagerProfiles.Remove(profile);
 
@@ -168,6 +175,24 @@ namespace GigKompassen.Services
     public static UpdateManagerDto FromManagerProfile(ManagerProfile manager)
     {
       return new UpdateManagerDto(manager.Name, manager.Description, manager.Location, manager.Public);
+    }
+  }
+
+  public class ManagerProfileQueryOptions : ProfileQueryOptions
+  {
+    public ManagerProfileQueryOptions(bool includeOwner = false, bool includeMediaGallery = false) : base(includeOwner, includeMediaGallery, Enums.ProfileTypes.Manager)
+    {
+    }
+
+    public IQueryable<ManagerProfile> Apply(IQueryable<ManagerProfile> query)
+    {
+      if (IncludeOwner)
+        query = query.Include(sp => sp.Owner);
+
+      if (IncludeMediaGallery)
+        query = query.Include(sp => sp.MediaGalleryOwner);
+
+      return query;
     }
   }
 }

@@ -1,5 +1,4 @@
-﻿using GigKompassen.Authorization.Policies.Handlers;
-using GigKompassen.Enums;
+﻿using GigKompassen.Enums;
 using GigKompassen.Models.Accounts;
 using GigKompassen.Services;
 using GigKompassen.Settings;

@@ -4,8 +4,6 @@ using GigKompassen.Models.Media;
 
 using Microsoft.EntityFrameworkCore;
 
-using static GigKompassen.Misc.AsyncEventsHelper;
-
 namespace GigKompassen.Services
 {
   public class MediaService
@@ -13,24 +11,25 @@ namespace GigKompassen.Services
 
     private readonly ApplicationDbContext _context;
 
-    public event AsyncEventHandler<MediaGallery> OnCreateMediaGallery;
-    public event AsyncEventHandler<MediaItem> OnCreateMediaItem;
-    public event AsyncEventHandler<MediaLink> OnCreateMediaLink;
-    public event AsyncEventHandler<MediaItem> OnUpdateMediaItem;
-    public event AsyncEventHandler<MediaGallery> OnDeleteMediaGallery;
-    public event AsyncEventHandler<MediaItem> OnDeleteMediaItem;
-    public event AsyncEventHandler<MediaLink> OnDeleteMediaLink;
-
     public MediaService(ApplicationDbContext context)
     {
       _context = context;
     }
 
-    #region Get
+    #region Getters
+    public async Task<MediaGalleryOwner?> GetMediaGalleryOwnerAsync(Guid id)
+    {
+      if (!_context.MediaGalleryOwners.Any(mgo => mgo.Id == id))
+        throw new KeyNotFoundException("MediaGalleryOwner not found");
+
+      return await _context.MediaGalleryOwners.Include(mgo => mgo.Galleries).ThenInclude(mg => mg.Items).ThenInclude(i => i.MediaLink).Where(g => g.Id == id).FirstOrDefaultAsync();
+    }
+
     public async Task<MediaGallery?> GetGalleryAsync(Guid galleryId)
     {
       var gallery = await _context.MediaGalleries
           .Include(g => g.Items)
+          .ThenInclude(i => i.MediaLink)
           .Include(g => g.Owner)
           .FirstOrDefaultAsync(g => g.Id == galleryId);
 
@@ -79,8 +78,6 @@ namespace GigKompassen.Services
         OwnerId = galleryOwner.Id
       };
 
-      if(OnCreateMediaGallery != null)
-        await OnCreateMediaGallery.InvokeAsync(this, gallery);
       _context.MediaGalleries.Add(gallery);
       galleryOwner.Galleries!.Add(gallery);
       if(await _context.SaveChangesAsync() == 0)
@@ -109,9 +106,6 @@ namespace GigKompassen.Services
       mediaItem.Gallery = gallery;
       mediaItem.GalleryId = gallery.Id;
 
-      if(OnCreateMediaItem != null)
-        await OnCreateMediaItem.InvokeAsync(this, mediaItem);
-
       await _context.MediaItems.AddAsync(mediaItem);
       if(await _context.SaveChangesAsync() == 0)
         throw new DbUpdateException("Failed to create MediaItem");
@@ -133,9 +127,6 @@ namespace GigKompassen.Services
       mediaLink.UploaderId = uploader.Id;
       mediaLink.Uploader = uploader;
 
-      if(OnCreateMediaLink != null)
-       await OnCreateMediaLink.InvokeAsync(this, mediaLink);
-
       await _context.MediaLinks.AddAsync(mediaLink);
       if(await _context.SaveChangesAsync() == 0)
         throw new DbUpdateException("Failed to create MediaLink");
@@ -155,9 +146,6 @@ namespace GigKompassen.Services
         throw new KeyNotFoundException("MediaItem not found");
 
       dto.UpdateMediaItem(item);
-
-      if(OnUpdateMediaItem != null)
-        await OnUpdateMediaItem.InvokeAsync(this, item);
 
       if(await _context.SaveChangesAsync() == 0)
         throw new DbUpdateException("Failed to update MediaItem");
@@ -213,9 +201,6 @@ namespace GigKompassen.Services
         _context.MediaItems.RemoveRange(items);
       }
 
-      if(OnDeleteMediaGallery != null)
-        await OnDeleteMediaGallery.InvokeAsync(this, gallery);
-
       _context.MediaGalleries.Remove(gallery);
       if(await _context.SaveChangesAsync() == 0)
         throw new DbUpdateException("Failed to delete MediaGallery");
@@ -232,9 +217,6 @@ namespace GigKompassen.Services
       if (item.MediaLink != null)
         _context.MediaLinks.Remove(item.MediaLink);
 
-      if(OnDeleteMediaItem != null)
-        await OnDeleteMediaItem.InvokeAsync(this, item);
-
       _context.MediaItems.Remove(item);
       if(await _context.SaveChangesAsync() == 0)
         throw new DbUpdateException("Failed to delete MediaItem");
@@ -247,9 +229,6 @@ namespace GigKompassen.Services
       var link = await _context.MediaLinks.FindAsync(linkId);
       if (link == null)
         return false;
-
-      if(OnDeleteMediaLink != null)
-        await OnDeleteMediaLink.InvokeAsync(this, link);
 
       _context.MediaLinks.Remove(link);
       if(await _context.SaveChangesAsync() == 0)
@@ -317,4 +296,5 @@ namespace GigKompassen.Services
       return new CreateMediaLinkDto(mediaLink.Path, mediaLink.MediaType, mediaLink.Uploaded);
     }
   }
+
 }
