@@ -5,23 +5,15 @@ using GigKompassen.Models.Profiles;
 
 using Microsoft.EntityFrameworkCore;
 
-using static GigKompassen.Misc.AsyncEventsHelper;
-
 namespace GigKompassen.Services
 {
   public class ProfileAccessService
   {
     private readonly ApplicationDbContext _context;
 
-    public event AsyncEventHandler<ProfileAccess> OnAddAuthorization;
-    public event AsyncEventHandler<ProfileAccess> OnRemoveAuthorization;
-    public event AsyncEventHandler<List<ProfileAccess>> OnRemoveAuthorizations;
-    public event AsyncEventHandler<BaseProfile> OnSetProfileOwner;
-
     public ProfileAccessService(ApplicationDbContext context) 
     {
       _context = context;
-
     }
 
     public async Task<bool> CanAccessProfileAsync(Guid userId, Guid profileId, AccessType accessType)
@@ -67,9 +59,6 @@ namespace GigKompassen.Services
         User = user
       };
 
-      if(OnAddAuthorization != null)
-        await OnAddAuthorization.InvokeAsync(this, profileAccess);
-
       _context.ProfileAccesses.Add(profileAccess);
 
       if (await _context.SaveChangesAsync() == 0)
@@ -92,9 +81,6 @@ namespace GigKompassen.Services
         return false;
       }
 
-      if(OnRemoveAuthorization != null)
-        await OnRemoveAuthorizations.InvokeAsync(this, auths);
-
       _context.ProfileAccesses.RemoveRange(auths);
       return await _context.SaveChangesAsync() > 0;
     }
@@ -113,9 +99,6 @@ namespace GigKompassen.Services
         return false;
       }
 
-      if(OnRemoveAuthorizations != null)
-        await OnRemoveAuthorizations.InvokeAsync(this, auths);
-
       _context.ProfileAccesses.RemoveRange(auths);
       return await _context.SaveChangesAsync() > 0;
     }
@@ -127,9 +110,6 @@ namespace GigKompassen.Services
       {
         return false;
       }
-
-      if (OnRemoveAuthorization != null)
-        await OnRemoveAuthorization.InvokeAsync(this, profileAccess);
 
       _context.ProfileAccesses.Remove(profileAccess);
       int result = await _context.SaveChangesAsync();
@@ -145,9 +125,6 @@ namespace GigKompassen.Services
         return false;
       }
 
-      if(OnRemoveAuthorizations != null)
-        await OnRemoveAuthorizations.InvokeAsync(this, auths);
-
       _context.ProfileAccesses.RemoveRange(auths);
       return await _context.SaveChangesAsync() > 0;
     }
@@ -159,8 +136,6 @@ namespace GigKompassen.Services
       {
         return false;
       }
-      if(OnRemoveAuthorizations != null)
-        await OnRemoveAuthorizations.InvokeAsync(this, auths);
 
       _context.ProfileAccesses.RemoveRange(auths);
       return await _context.SaveChangesAsync() > 0;
@@ -177,9 +152,6 @@ namespace GigKompassen.Services
         throw new KeyNotFoundException("Profile not found");
 
       profile.Owner = user;
-
-      if(OnSetProfileOwner != null)
-        await OnSetProfileOwner.InvokeAsync(this, profile);
 
       if(await _context.SaveChangesAsync() == 0)
         throw new DbUpdateException("Failed to set Profile Owner");
