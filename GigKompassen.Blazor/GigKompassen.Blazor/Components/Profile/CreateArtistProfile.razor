@@ -186,7 +186,7 @@ else if(IsAuthorized.HasValue && IsAuthorized.Value)
 			try
 			{
 				ArtistProfile = await ArtistService.CreateAsync(User.Id, this.GetArtistDto(), this.GetGenres(), this.GetMemberDtos());
-				AddSuccess("Artist profile created successfully", $"/Profile/Artist/{ArtistProfile.Id}");
+				AddSuccess("Artist profile created successfully", $"/Profile/{ArtistProfile.Id}");
 			} 
 			catch (Exception e)
 			{

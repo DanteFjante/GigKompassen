@@ -2,6 +2,8 @@
 @using GigKompassen.Models.Accounts
 @using GigKompassen.Models.Profiles
 @using GigKompassen.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Identity
 
 @inject ILogger<CreateManagerProfile> Logger
@@ -98,7 +100,7 @@ else if (IsAuthorized.HasValue && IsAuthorized.Value)
 			try
 			{
 				ManagerProfile = await ManagerService.CreateAsync(User.Id, this.GetManagerDto());
-				AddSuccess("Manager profile created successfully", $"/Profile/Manager/{ManagerProfile.Id}");
+				AddSuccess("Manager profile created successfully", $"/Profile/{ManagerProfile.Id}");
 			}
 			catch (Exception e)
 			{

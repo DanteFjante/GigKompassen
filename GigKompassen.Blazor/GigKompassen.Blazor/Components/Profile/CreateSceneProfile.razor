@@ -3,6 +3,8 @@
 @using GigKompassen.Models.Accounts
 @using GigKompassen.Models.Profiles
 @using GigKompassen.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Identity
 
 @inject ILogger<CreateSceneProfile> Logger
@@ -168,7 +170,7 @@ else if (IsAuthorized.HasValue && IsAuthorized.Value)
       try
       {
         SceneProfile = await SceneService.CreateAsync(User.Id, this.GetSceneDto(), this.GetGenres());
-        AddSuccess("Scene profile created successfully", $"/Profile/Scene/{SceneProfile.Id}");
+        AddSuccess("Scene profile created successfully", $"/Profile/{SceneProfile.Id}");
       }
       catch (Exception e)
       {
