@@ -4,8 +4,7 @@
   {
     public Guid Id { get; set; }
 
-
     // Navigation properties
-    public List<MediaGallery>? Galleries { get; set; }
+    public List<MediaGallery> Galleries { get; set; } = new List<MediaGallery>();
   }
 }
