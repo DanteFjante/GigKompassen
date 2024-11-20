@@ -1,13 +1,8 @@
 ﻿using GigKompassen.Data;
+using GigKompassen.Enums;
 using GigKompassen.Models.Profiles;
 
 using Microsoft.EntityFrameworkCore;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GigKompassen.Services
 {
@@ -20,20 +15,19 @@ namespace GigKompassen.Services
       _context = context;
     }
 
-    public async Task<List<BaseProfile>> GetAllAsync(int? skip = null, int? take = null)
+    public async Task<List<BaseProfile>> GetAllAsync(int? skip = null, int? take = null, ProfileQueryOptions? queryOptions = null)
     {
       var query = _context.Profiles.AsQueryable();
 
       if (skip.HasValue)
-      {
         query = query.Skip(skip.Value);
-      }
 
       if (take.HasValue)
-      {
         query = query.Take(take.Value);
-      }
 
+      if(queryOptions != null)
+        query = queryOptions.Apply(query);
+      
       return await query.ToListAsync();
     }
 
@@ -52,5 +46,34 @@ namespace GigKompassen.Services
       return await _context.Profiles.Where(p => p.OwnerId == userId).ToListAsync();
     }
 
+  }
+
+  public class ProfileQueryOptions
+  {
+    public bool IncludeOwner { get; } = false;
+    public bool IncludeMediaGallery { get; } = false;
+
+    public ProfileTypes? ProfileType { get; init; } = null;
+
+    public ProfileQueryOptions(bool includeOwner = false, bool includeMediaGallery = false, ProfileTypes? profileType = null)
+    {
+      IncludeOwner = includeOwner;
+      IncludeMediaGallery = includeMediaGallery;
+      ProfileType = profileType;
+    }
+
+    public IQueryable<BaseProfile> Apply(IQueryable<BaseProfile> query)
+    {
+      if (IncludeOwner)
+        query = query.Include(sp => sp.Owner);
+
+      if (IncludeMediaGallery)
+        query = query.Include(sp => sp.MediaGalleryOwner);
+
+      if (ProfileType != null)
+        query = query.Where(p => p.ProfileType == ProfileType);
+
+      return query;
+    }
   }
 }
