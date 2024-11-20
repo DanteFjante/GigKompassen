@@ -16,8 +16,8 @@ namespace GigKompassen.Models.Chats
     public Guid MediaGalleryOwnerId { get; set; }
 
     // Navigation properties
-    public List<ChatMessage>? Messages { get; set; } = new List<ChatMessage>();
-    public List<ChatParticipant>? Participants { get; set; } = new List<ChatParticipant>();
+    public List<ChatMessage> Messages { get; set; } = new List<ChatMessage>();
+    public List<ChatParticipant> Participants { get; set; } = new List<ChatParticipant>();
     public MediaGalleryOwner? MediaGalleryOwner { get; set; }
 
   }
