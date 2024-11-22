@@ -13,6 +13,8 @@ using GigKompassen.Blazor.Components.Account.Shared;
 using GigKompassen.Blazor.Models.Status;
 using Microsoft.Extensions.Logging;
 
+using Serilog;
+
 namespace GigKompassen.Blazor
 {
   public class Program
@@ -33,12 +35,14 @@ namespace GigKompassen.Blazor
 
       builder.Services.AddSingleton<StatusCollection>();
 
-      builder.Logging.ClearProviders();
-      builder.Logging.AddConsole();
-      builder.Logging.AddDebug();
-
       // Add file logging with Serilog or other providers if needed
       builder.Logging.AddAzureWebAppDiagnostics();
+
+      Log.Logger = new LoggerConfiguration()
+        .ReadFrom.Configuration(builder.Configuration)
+        .CreateLogger();
+
+      builder.Host.UseSerilog();
 
       builder.Services.AddAuthentication(options =>
           {
@@ -49,8 +53,8 @@ namespace GigKompassen.Blazor
 
       var assemblyname = typeof(Program).Assembly.GetName().Name;
 
-      var connectionString = builder.Configuration.GetConnectionString("DatabaseConnection") 
-        ?? builder.Configuration.GetConnectionString("DefaultConnection") 
+      var connectionString = builder.Configuration.GetConnectionString("DatabaseConnection")
+        ?? builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
       builder.Services.AddDbContext<ApplicationDbContext>(options =>
           options.UseSqlServer(
@@ -72,6 +76,8 @@ namespace GigKompassen.Blazor
       builder.Services.AddSingleton<IEmailSender<ApplicationUser>, GmailService>();
 
       var app = builder.Build();
+
+
 
       await app.Services.ConfigureGigKompassenRolesAsync();
       // Configure the HTTP request pipeline.
