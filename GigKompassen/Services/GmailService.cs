@@ -30,7 +30,7 @@ namespace GigKompassen.Services
     public async Task SendEmailAsync(string email, string subject, string htmlMessage)
     {
       MimeMessage message = new MimeMessage();
-      message.From.Add(new MailboxAddress(Options.Username, Options.Email));
+      message.From.Add(new MailboxAddress(Options.SenderName, Options.Email));
       message.To.Add(new MailboxAddress("", email));
       message.Subject = subject;
       BodyBuilder bodyBuilder = new BodyBuilder();
@@ -40,13 +40,13 @@ namespace GigKompassen.Services
       using (var client = new SmtpClient())
       {
         await client.ConnectAsync(_host, _port, SecureSocketOptions.StartTls);
-        Logger.LogInformation($"Connected to SMTP server {_host} as {Options.Username}");
+        Logger.LogInformation($"Connected to SMTP server {_host} as {Options.SenderName}");
         await client.AuthenticateAsync(Options.Email, Options.Password);
         Logger.LogInformation($"Authenticated as {Options.Email}");
         await client.SendAsync(message);
         Logger.LogInformation($"Sent email to {email}");
         await client.DisconnectAsync(true);
-        Logger.LogInformation($"Disconnected from SMTP server {_host} as {Options.Username}");
+        Logger.LogInformation($"Disconnected from SMTP server {_host} as {Options.SenderName}");
       }
     }
 

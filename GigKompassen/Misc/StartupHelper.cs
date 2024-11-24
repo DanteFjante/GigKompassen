@@ -17,7 +17,7 @@ namespace GigKompassen.Misc
     public static void AddGigKompassenConfiguration<AssemblyType>(this IHostApplicationBuilder builder) where AssemblyType : class
     {
       builder.Configuration.AddUserSecrets<AssemblyType>();
-      builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection(nameof(EmailSettings)));
+      builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSender"));
     }
 
     public static void AddGigKompassenServices(this IServiceCollection services)
