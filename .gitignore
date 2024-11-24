@@ -361,3 +361,4 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/GigKompassen.Blazor/GigKompassen.Blazor/Properties/launchSettings.json

@@ -38,7 +38,9 @@ namespace GigKompassen.Blazor
       // Add file logging with Serilog or other providers if needed
       builder.Logging.AddAzureWebAppDiagnostics();
 
-      string appInsightsKey = builder.Configuration["AppInsightsInstrumentationKey"]
+      var config = builder.Configuration.AddEnvironmentVariables().Build();
+
+      string appInsightsKey = config["AppInsightsInstrumentationKey"]
         ?? throw new InvalidOperationException("AppInsightsInstrumentationKey not found in configuration.");
 
       Log.Logger = new LoggerConfiguration()
@@ -65,7 +67,8 @@ namespace GigKompassen.Blazor
 
       var assemblyname = typeof(Program).Assembly.GetName().Name;
 
-      var connectionString = builder.Configuration.GetConnectionString("DatabaseConnection")
+      var connectionString = builder.Configuration["DatabaseConnection"]
+        ?? builder.Configuration.GetConnectionString("DatabaseConnection")
         ?? builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
       builder.Services.AddDbContext<ApplicationDbContext>(options =>
