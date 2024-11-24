@@ -14,6 +14,7 @@ using GigKompassen.Blazor.Models.Status;
 using Microsoft.Extensions.Logging;
 
 using Serilog;
+using GigKompassen.Blazor.Components.Pages;
 
 namespace GigKompassen.Blazor
 {
@@ -43,10 +44,15 @@ namespace GigKompassen.Blazor
       string appInsightsKey = config["AppInsightsInstrumentationKey"]
         ?? throw new InvalidOperationException("AppInsightsInstrumentationKey not found in configuration.");
 
+      string logPath = config["LogPath"]
+        ?? "C:/home/site/wwwroot/LogFiles/";
+
+      string logFile = Path.Combine(logPath, "Gigkompassen-.txt");
+
       Log.Logger = new LoggerConfiguration()
-        .WriteTo.Console()
-        .WriteTo.File(
-        path: "D:/home/LogFiles/Gigkompassen-.txt",
+      .WriteTo.Console()
+      .WriteTo.File(
+        path: logFile,
         restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Verbose,
         outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level}] {Message}{NewLine}{Exception}",
         rollingInterval: RollingInterval.Day)
@@ -67,7 +73,7 @@ namespace GigKompassen.Blazor
 
       var assemblyname = typeof(Program).Assembly.GetName().Name;
 
-      var connectionString = builder.Configuration["DatabaseConnection"]
+      var connectionString = config["DatabaseConnection"]
         ?? builder.Configuration.GetConnectionString("DatabaseConnection")
         ?? builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
