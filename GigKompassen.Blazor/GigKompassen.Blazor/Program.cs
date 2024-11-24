@@ -49,6 +49,9 @@ namespace GigKompassen.Blazor
 
       string logFile = Path.Combine(logPath, "Gigkompassen-.txt");
 
+      Log.Debug("Log file: {logFile}", logFile);
+      Log.Debug("Path exists: {exists}", Path.Exists(logPath)); 
+
       Log.Logger = new LoggerConfiguration()
       .WriteTo.Console()
       .WriteTo.File(
