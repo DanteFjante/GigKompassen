@@ -38,8 +38,20 @@ namespace GigKompassen.Blazor
       // Add file logging with Serilog or other providers if needed
       builder.Logging.AddAzureWebAppDiagnostics();
 
+      string appInsightsKey = builder.Configuration["AppInsightsInstrumentationKey"]
+        ?? throw new InvalidOperationException("AppInsightsInstrumentationKey not found in configuration.");
+
       Log.Logger = new LoggerConfiguration()
-        .ReadFrom.Configuration(builder.Configuration)
+        .WriteTo.Console()
+        .WriteTo.File(
+        path: "D:/home/LogFiles/Gigkompassen-.txt",
+        restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Verbose,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level}] {Message}{NewLine}{Exception}",
+        rollingInterval: RollingInterval.Day)
+        .WriteTo.ApplicationInsights(
+        telemetryConverter: TelemetryConverter.Traces,
+        telemetryConfiguration: new Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration(appInsightsKey),
+        restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Verbose)
         .CreateLogger();
 
       builder.Host.UseSerilog();
