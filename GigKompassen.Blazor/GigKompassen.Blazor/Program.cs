@@ -94,7 +94,7 @@ namespace GigKompassen.Blazor
 
 
 
-      await app.Services.ConfigureGigKompassenRolesAsync();
+      //await app.Services.ConfigureGigKompassenRolesAsync();
       // Configure the HTTP request pipeline.
       if (app.Environment.IsDevelopment())
       {
